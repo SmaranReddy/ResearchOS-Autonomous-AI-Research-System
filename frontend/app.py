@@ -1,94 +1,135 @@
-# frontend/app.py
-
 import streamlit as st
-import sys
 import os
+import sys
 import io
+import json
 from contextlib import redirect_stdout
 
-# Adjust Python path so backend modules are importable
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend")))
+# ---------------------------------------------------------------------
+# 🧩 Fix Import Path (important)
+# ---------------------------------------------------------------------
+# Add the project root (parent of frontend/) to Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from pipeline import main as run_pipeline
+# Now you can import from backend/
+from backend.pipeline import main as run_pipeline
+
 
 # ---------------------------------------------------------------------
-# 🧠 Streamlit App Configuration
+# 🎨 Streamlit Page Configuration
 # ---------------------------------------------------------------------
-st.set_page_config(page_title="AI Research Downloader", page_icon="🧠", layout="wide")
+st.set_page_config(
+    page_title="Tavily Research Assistant",
+    page_icon="🧠",
+    layout="wide",
+)
 
-st.title("🧠 AI Research Downloader & Indexer")
+# ---------------------------------------------------------------------
+# 🧠 Header Section
+# ---------------------------------------------------------------------
+st.title("🧠 Tavily Research Assistant")
 st.markdown("""
-Search and summarize the latest research papers directly from **ArXiv**, 
-generate embeddings, and store them in **Pinecone**.
+Welcome to your **AI-Powered Research Pipeline**!  
+This app automates your research process by:
+1. Searching for papers via Tavily  
+2. Downloading and extracting text  
+3. Cleaning, tokenizing, and chunking content  
+4. Summarizing key sections  
+5. Embedding and indexing results for retrieval
+
+---
 """)
 
 # ---------------------------------------------------------------------
-# 🔍 User Input Section
+# 🔍 User Input
 # ---------------------------------------------------------------------
-query = st.text_input("Enter a research topic or paper title:", placeholder="e.g. Attention is all you need")
+query = st.text_input(
+    "Enter your research query:",
+    placeholder="e.g. Graph neural networks in molecular biology"
+)
 
-if st.button("Run Pipeline 🚀"):
+# ---------------------------------------------------------------------
+# 🚀 Run Button
+# ---------------------------------------------------------------------
+if st.button("🚀 Run Research Pipeline", use_container_width=True):
     if not query.strip():
-        st.warning("⚠️ Please enter a valid query before running.")
+        st.warning("Please enter a query first.")
+        st.stop()
+
+    # Display spinner and capture output
+    with st.spinner("Running Tavily Research Pipeline... Please wait ⏳"):
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            try:
+                run_pipeline(query)
+            except Exception as e:
+                st.error(f"Pipeline execution failed: {e}")
+
+    # -----------------------------------------------------------------
+    # 🧾 Show Logs
+    # -----------------------------------------------------------------
+    st.subheader("🧾 Pipeline Execution Logs")
+    st.text_area("Execution Log", buffer.getvalue(), height=350)
+
+    # -----------------------------------------------------------------
+    # 📂 Load Output JSON (if exists)
+    # -----------------------------------------------------------------
+    safe_name = query.replace(" ", "_").replace("/", "_")
+    json_path = os.path.join("downloads", f"{safe_name}.json")
+
+    if os.path.exists(json_path):
+        with open(json_path, "r", encoding="utf-8") as f:
+            paper_data = json.load(f)
+
+        st.success("✅ Research pipeline completed successfully!")
+
+        # -------------------------------------------------------------
+        # 📘 Paper Details
+        # -------------------------------------------------------------
+        st.subheader("📘 Paper Details")
+        st.write(f"**Title:** {paper_data.get('title', 'N/A')}")
+        st.write(f"**Link:** [{paper_data.get('link', 'N/A')}]({paper_data.get('link', '#')})")
+
+        # -------------------------------------------------------------
+        # 📝 Summary
+        # -------------------------------------------------------------
+        if "summary_structured" in paper_data:
+            st.subheader("📝 Summary")
+            st.write(paper_data["summary_structured"])
+
+        # -------------------------------------------------------------
+        # 📄 Extracted Full Text
+        # -------------------------------------------------------------
+        with st.expander("📄 View Extracted Full Text"):
+            st.text_area(
+                "Full Text",
+                paper_data.get("full_text", "No extracted text available."),
+                height=300
+            )
+
+        # -------------------------------------------------------------
+        # 💾 Download Button
+        # -------------------------------------------------------------
+        st.download_button(
+            label="💾 Download Paper JSON",
+            data=json.dumps(paper_data, ensure_ascii=False, indent=2),
+            file_name=f"{safe_name}.json",
+            mime="application/json",
+        )
     else:
-        st.info(f"Running RAG pipeline for: **{query}**")
-        progress = st.progress(0)
-        log_output = io.StringIO()
-
-        with st.spinner("Fetching and processing papers..."):
-            with redirect_stdout(log_output):
-                try:
-                    run_pipeline(query)  # ✅ Pass user query here
-                    success = True
-                except Exception as e:
-                    success = False
-                    st.error(f"❌ Pipeline failed: {e}")
-
-        progress.progress(100)
-        if success:
-            st.success("✅ Pipeline complete! Check details below.")
-        else:
-            st.error("⚠️ Pipeline encountered errors. Check logs for details.")
-
-        # ---------------------------------------------------------------------
-        # 🧾 Logs Section
-        # ---------------------------------------------------------------------
-        logs = log_output.getvalue()
-        st.subheader("🧾 Pipeline Logs")
-        st.text_area("Detailed Execution Logs", logs, height=400)
-
-        # ---------------------------------------------------------------------
-        # 📄 Summaries Section
-        # ---------------------------------------------------------------------
-        summaries_dir = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")), "backend")
-
-        st.subheader("📄 Generated Summaries")
-        found_any = False
-
-        for root, _, files in os.walk(summaries_dir):
-            for file in files:
-                if file.endswith(".txt"):
-                    found_any = True
-                    file_path = os.path.join(root, file)
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        content = f.read()
-
-                    with st.expander(f"🧩 {file.replace('.txt', '')}", expanded=False):
-                        st.write(content)
-
-        if not found_any:
-            st.info("No summaries found yet — run the pipeline to generate them!")
+        st.warning("⚠️ No paper JSON found. The pipeline may have stopped early.")
 
 # ---------------------------------------------------------------------
-# 📌 Sidebar Info
+# 📚 Sidebar
 # ---------------------------------------------------------------------
 st.sidebar.header("ℹ️ About")
 st.sidebar.markdown("""
-**AI Research Downloader** helps you:
-- 🔍 Search ArXiv papers by topic  
-- 🧠 Summarize abstracts using LLMs  
-- 📊 Generate embeddings  
-- 🪣 Store results in Pinecone  
+**Tavily AI Research Assistant**  
+Built with:
+- 🧠 Python + Streamlit  
+- 🔍 Tavily API  
+- 🧩 Pinecone + LangChain-style multi-agent pipeline  
 
-Built with ❤️ using Python, Groq, and Streamlit.
+Use this app to automate literature search, summarization, and indexing.  
+Ideal for students, researchers, and AI developers.
 """)

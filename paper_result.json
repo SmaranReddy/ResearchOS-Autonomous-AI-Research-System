@@ -1,10 +1,10 @@
 {
-    "query": "Transformers, 2017 paper, google",
-    "pdf_link": "https://link.springer.com/content/pdf/10.1186/s40537-023-00842-0.pdf",
+    "query": "attension is all you need",
+    "pdf_link": "https://arxiv.org/pdf/1706.03762.pdf",
     "all_found_pdfs": [
-        "https://link.springer.com/content/pdf/10.1186/s40537-023-00842-0.pdf",
-        "https://arxiv.org/pdf/2304.10557.pdf",
-        "https://arxiv.org/pdf/2306.07303.pdf",
-        "https://arxiv.org/pdf/1706.03762.pdf"
+        "https://arxiv.org/pdf/1706.03762.pdf",
+        "https://dl.acm.org/doi/pdf/pdf/10.5555/3295222.3295349",
+        "https://arxiv.org/pdf/2501.09166.pdf",
+        "https://arxiv.org/pdf/2407.15516.pdf"
     ]
 }

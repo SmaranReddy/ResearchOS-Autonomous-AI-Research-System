@@ -16,3 +16,4 @@ rich
 neo4j
 google-generativeai
 tiktoken
+matplotlib
