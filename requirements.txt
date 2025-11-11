@@ -13,3 +13,6 @@ numpy
 scikit-learn
 fitz
 rich
+neo4j
+google-generativeai
+tiktoken
