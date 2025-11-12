@@ -1,87 +1,165 @@
 import os
 import json
+import re
 from dotenv import load_dotenv
+from groq import Groq
 from neo4j import GraphDatabase
-import google.generativeai as genai
+from pyvis.network import Network
+import networkx as nx
 
-# Load environment variables
+# ==========================================
+# 1️⃣ Load Environment Variables
+# ==========================================
 load_dotenv()
 
-# Configure Gemini API
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+NEO4J_URI = os.getenv("NEO4J_URI")
+NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
-# Configure Neo4j
-NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+if not all([GROQ_API_KEY, NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD]):
+    raise ValueError("❌ Missing one or more environment variables")
 
-driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+# ==========================================
+# 2️⃣ Initialize Clients
+# ==========================================
+groq_client = Groq(api_key=GROQ_API_KEY)
+neo4j_driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USERNAME, NEO4J_PASSWORD))
 
-def extract_kg_from_text(paragraph: str):
-    """
-    Use Gemini to extract knowledge graph triples from unstructured text.
-    """
+# ==========================================
+# 3️⃣ Extract JSON More Intelligently
+# ==========================================
+def extract_json_from_text(text: str):
+    """Extract JSON array even if wrapped inside markdown, code, or text."""
+    # Remove ```python``` / ```json``` / ``` fences
+    text = re.sub(r"```(?:json|python)?", "", text, flags=re.IGNORECASE).strip()
+
+    # Look for JSON arrays explicitly inside code blocks
+    matches = re.findall(r"\[\s*\[.*?\]\s*\]", text, re.DOTALL)
+    if matches:
+        for match in matches[::-1]:  # try from last to first (most likely correct)
+            try:
+                data = json.loads(match)
+                if isinstance(data, list):
+                    return data
+            except json.JSONDecodeError:
+                continue
+
+    # Fallback: clean up and find any last valid JSON-looking array
+    start = text.find("[[")
+    end = text.rfind("]]") + 2
+    if start != -1 and end > start:
+        candidate = text[start:end]
+        candidate = re.sub(r"\\n", "", candidate)
+        try:
+            data = json.loads(candidate)
+            if isinstance(data, list):
+                return data
+        except json.JSONDecodeError:
+            pass
+
+    return []
+
+# ==========================================
+# 4️⃣ Extract Triples via Groq LLM
+# ==========================================
+def extract_triples(sentence: str):
     prompt = f"""
-    You are an information extraction assistant.
-    From the text below, extract all meaningful entities and relationships.
-    Return output strictly as valid JSON in this format:
+    Extract all factual (subject, relation, object) triples from this text.
+    Return ONLY a valid JSON array, nothing else. Example:
+    [["Albert Einstein", "discovered", "Theory of Relativity"]]
 
-    {{
-      "triples": [
-        {{"subject": "Entity1", "relation": "relation", "object": "Entity2"}}
-      ]
-    }}
-
-    Example:
-    Input: "Elon Musk founded SpaceX in 2002."
-    Output:
-    {{
-      "triples": [
-        {{"subject": "Elon Musk", "relation": "founded", "object": "SpaceX"}}
-      ]
-    }}
-
-    Text:
-    \"\"\"{paragraph}\"\"\"
+    Text: "{sentence}"
     """
 
-    model = genai.GenerativeModel("gemini-2.5-flash")
-    response = model.generate_content(prompt)
+    completion = groq_client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0,
+    )
 
-    # Try to parse JSON safely
-    try:
-        # Extract JSON substring if Gemini wraps it with text
-        content = response.text.strip()
-        json_str = content[content.find("{"):content.rfind("}") + 1]
-        data = json.loads(json_str)
-        return data.get("triples", [])
-    except Exception as e:
-        print("⚠️ JSON parse error:", e)
-        print("Gemini raw output:", response.text)
+    raw_output = completion.choices[0].message.content.strip()
+    triples = extract_json_from_text(raw_output)
+
+    if triples:
+        return triples
+    else:
+        print("⚠️ Could not parse valid JSON from model output.\nRaw output:\n", raw_output)
         return []
 
-def insert_into_neo4j(triples):
+# ==========================================
+# 5️⃣ Neo4j Functions
+# ==========================================
+def insert_triples_to_neo4j(triples):
+    query = """
+    MERGE (a:Entity {name: $subject})
+    MERGE (b:Entity {name: $object})
+    MERGE (a)-[:RELATION {type: $relation}]->(b)
     """
-    Insert extracted triples into Neo4j as nodes and relationships.
+    with neo4j_driver.session() as session:
+        for triple in triples:
+            if isinstance(triple, list) and len(triple) >= 3:
+                sub, rel, obj = triple[:3]
+                session.run(query, subject=sub, relation=rel, object=obj)
+
+def get_graph():
+    query = """
+    MATCH (a:Entity)-[r:RELATION]->(b:Entity)
+    RETURN a.name AS from, r.type AS relation, b.name AS to
     """
-    with driver.session() as session:
-        for t in triples:
-            s, r, o = t["subject"], t["relation"], t["object"]
-            session.run("""
-                MERGE (a:Entity {name: $subject})
-                MERGE (b:Entity {name: $object})
-                MERGE (a)-[:RELATION {type: $relation}]->(b)
-            """, subject=s, object=o, relation=r)
+    with neo4j_driver.session() as session:
+        results = session.run(query)
+        return [record.data() for record in results]
 
-def build_knowledge_graph(paragraph: str):
-    triples = extract_kg_from_text(paragraph)
-    print("📘 Extracted Triples:", triples)
-    if triples:
-        insert_into_neo4j(triples)
-        print("✅ Knowledge graph updated in Neo4j!")
-    else:
-        print("⚠️ No triples extracted.")
+# ==========================================
+# 6️⃣ Visualize Graph
+# ==========================================
+def visualize_graph(graph_data, output_path="knowledge_graph.html"):
+    G = nx.DiGraph()
 
+    for rel in graph_data:
+        src = rel["from"]
+        dst = rel["to"]
+        edge_label = rel["relation"]
+        G.add_node(src, label=src)
+        G.add_node(dst, label=dst)
+        G.add_edge(src, dst, label=edge_label)
+
+    net = Network(height="650px", width="100%", directed=True, notebook=False)
+    net.from_nx(G)
+
+    for e in net.edges:
+        e["title"] = e["label"]
+
+    net.write_html(output_path, open_browser=False)
+    print(f"\n🌐 Graph visualization saved to: {os.path.abspath(output_path)}")
+    print("👉 Open it in your browser to explore interactively.\n")
+
+# ==========================================
+# 7️⃣ Main
+# ==========================================
 if __name__ == "__main__":
-    paragraph = input("Enter a paragraph: ")
-    build_knowledge_graph(paragraph)
+    sentence = input("Enter a sentence to build a knowledge graph: ")
+
+    print("\n🧠 Extracting triples using Groq LLM...")
+    triples = extract_triples(sentence)
+
+    if not triples:
+        print("❌ No triples extracted.")
+    else:
+        print(f"✅ Extracted {len(triples)} triples:")
+        for t in triples:
+            print("   ", t)
+
+        print("\n📥 Inserting triples into Neo4j...")
+        insert_triples_to_neo4j(triples)
+
+        print("✅ Data inserted. Current graph:")
+        graph_data = get_graph()
+
+        for rel in graph_data:
+            print(f"  ({rel['from']}) -[{rel['relation']}]-> ({rel['to']})")
+
+        visualize_graph(graph_data)
+        print("🎯 Done! Run this in Neo4j Browser:")
+        print("   MATCH (n)-[r]->(m) RETURN n,r,m;")

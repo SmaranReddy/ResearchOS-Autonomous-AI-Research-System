@@ -50,5 +50,6 @@ def run_pipeline(query: str, num_papers: int = 3):
 
 if __name__ == "__main__":
     q = input("Enter query: ")
-    out = run_pipeline(q, 3)
+    n = input("Number of papers to retrieve: ")
+    out = run_pipeline(q, int(n))
     print(out["final_message"])

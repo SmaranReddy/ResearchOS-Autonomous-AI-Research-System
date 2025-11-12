@@ -19,5 +19,6 @@ tiktoken
 fitz
 beautifulsoup4
 PyPDF2
-
 matplotlib
+pyvis
+networkx
