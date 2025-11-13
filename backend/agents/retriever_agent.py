@@ -1,5 +1,5 @@
 # ==========================================
-# backend/agents/retriever_agent.py (Fixed)
+# backend/agents/retriever_agent.py (FIXED)
 # ==========================================
 import google.generativeai as genai
 from pinecone import Pinecone
@@ -7,36 +7,34 @@ import os
 
 class RetrieverAgent:
     def __init__(self):
-        # Initialize Pinecone
         pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
         self.index = pc.Index("research-papers")
         print("✅ RetrieverAgent connected to Pinecone index.")
 
-        # Initialize Google embedding model
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
         self.embed_model = "models/text-embedding-004"
         print("✅ Google embedding model initialized for retrieval.")
 
     def embed_query(self, text: str):
-        """Convert query text into vector embedding"""
         result = genai.embed_content(model=self.embed_model, content=text)
         return result["embedding"]
 
     def retrieve(self, query: str, top_k: int = 5):
-        """Retrieve top relevant chunks for the query"""
-        query_vector = self.embed_query(query)  # ✅ FIXED — embed before querying
+        vector = self.embed_query(query)
 
         response = self.index.query(
-            namespace="research-papers",  # matches your index namespace
-            vector=query_vector,
+            namespace="default",   # ❗ FIXED
+            vector=vector,
             top_k=top_k,
             include_metadata=True
         )
 
-        results = []
+        chunks = []
         for match in response.get("matches", []):
-            metadata = match.get("metadata", {})
-            text = metadata.get("text", "")
-            if text.strip():
-                results.append(text)
-        return results
+            meta = match.get("metadata", {})
+            text = meta.get("text", "")  # ❗ FIXED
+            if text:
+                chunks.append(text)
+
+        print(f"🔎 Retrieved {len(chunks)} chunks.")
+        return chunks
