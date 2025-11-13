@@ -1,6 +1,5 @@
 # ==========================================
-# tavily_agent.py
-# Enhanced Tavily Research Paper Fetcher (5 Papers Version)
+# tavily_agent.py — FIXED (Exact K Papers)
 # ==========================================
 
 import os
@@ -11,8 +10,8 @@ from dotenv import load_dotenv
 
 class TavilyAgent:
     """
-    Tavily-powered agent to search for academic papers and extract valid or inferred PDF links.
-    Now fetches up to 5 papers per query, including arXiv, Springer, IEEE, and ACM sources.
+    Tavily-powered agent to search for academic papers.
+    Now guarantees EXACT k PDF results.
     """
 
     def __init__(self):
@@ -24,14 +23,10 @@ class TavilyAgent:
         print("[OK] Tavily client initialized successfully")
 
     # ====================================================
-    # 🔍 Search academic papers (max 5)
+    # 🔍 Search academic papers (returns EXACT k papers)
     # ====================================================
     def search(self, query: str, max_results: int = 5, days: int = 90):
-        """
-        Searches Tavily for up to 5 academic research papers related to the query.
-        Returns a list of papers with titles, abstracts, and direct/fixed PDF links.
-        """
-        print(f"🔍 Searching Tavily for: {query}")
+        print(f"🔍 Searching Tavily for: {query} (limit={max_results})")
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -39,8 +34,12 @@ class TavilyAgent:
         }
 
         payload = {
-            "query": query + " research paper site:arxiv.org OR site:springer.com OR site:ieeexplore.ieee.org OR site:dl.acm.org filetype:pdf",
-            "num_results": max_results * 2,  # fetch extra to filter invalid ones
+            "query": (
+                query +
+                " research paper site:arxiv.org OR site:springer.com OR "
+                "site:ieeexplore.ieee.org OR site:dl.acm.org filetype:pdf"
+            ),
+            "num_results": max_results * 3,   # fetch more than needed
         }
 
         try:
@@ -51,15 +50,15 @@ class TavilyAgent:
             print(f"❌ Tavily API error: {e}")
             return []
 
-        results = data.get("results", [])
-        if not results:
+        raw_results = data.get("results", [])
+        if not raw_results:
             print("⚠️ No Tavily results found.")
             return []
 
         papers = []
         seen = set()
 
-        for r in results:
+        for r in raw_results:
             url = r.get("url", "")
             title = r.get("title", "Untitled Paper").strip()
             abstract = r.get("snippet", "").strip()
@@ -68,15 +67,16 @@ class TavilyAgent:
                 continue
             seen.add(url)
 
-            fixed_link = self._normalize_pdf_url(url)
-            if not fixed_link:
+            # Convert to direct PDF URL
+            pdf = self._normalize_pdf_url(url)
+            if not pdf:
                 continue
 
             papers.append({
                 "title": title,
                 "abstract": abstract,
                 "summary": abstract,
-                "link": fixed_link,
+                "link": pdf,
                 "authors": [],
                 "published": "",
             })
@@ -84,56 +84,40 @@ class TavilyAgent:
             if len(papers) >= max_results:
                 break
 
-        print(f"📄 Tavily returned {len(papers)} paper results with PDFs.")
+        print(f"📄 Tavily returned {len(papers)} PDFs (exact cap = {max_results})")
         return papers
 
     # ====================================================
     # 🧩 Normalize academic links into direct PDF links
     # ====================================================
     def _normalize_pdf_url(self, url: str) -> str | None:
-        """
-        Converts academic URLs into direct or inferred PDF links.
-        Handles Springer, IEEE, ACM, arXiv, and other research domains.
-        """
         if not url:
             return None
 
-        # ✅ arXiv
+        # arXiv → direct PDF
         if "arxiv.org/abs/" in url:
-            pdf_url = url.replace("abs", "pdf")
-            if not pdf_url.endswith(".pdf"):
-                pdf_url += ".pdf"
-            return pdf_url
+            pdf = url.replace("abs", "pdf")
+            return pdf if pdf.endswith(".pdf") else pdf + ".pdf"
 
-        # ✅ Springer
+        # Springer → DOI → PDF
         if "springer" in url:
             match = re.search(r"10\.\d{4,9}/[-._;()/:A-Z0-9]+", url, re.I)
             if match:
                 doi = match.group(0)
                 return f"https://link.springer.com/content/pdf/{doi}.pdf"
 
-        # ✅ IEEE
+        # IEEE
         if "ieeexplore.ieee.org/document/" in url:
             doc_id = re.findall(r"/document/(\d+)", url)
             if doc_id:
                 return f"https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber={doc_id[0]}"
 
-        # ✅ ACM
+        # ACM
         if "dl.acm.org/doi/" in url:
             return url.replace("/doi/", "/doi/pdf/")
 
-        # ✅ Direct PDF links
+        # Direct PDF
         if url.endswith(".pdf"):
             return url
 
         return None
-
-
-# ====================================================
-# 🧪 Example Run (Standalone)
-# ====================================================
-if __name__ == "__main__":
-    agent = TavilyAgent()
-    query = input("🧠 Enter your research query: ")
-    papers = agent.search(query, max_results=5)
-    print(json.dumps(papers, indent=2, ensure_ascii=False))

@@ -1,91 +1,177 @@
-import streamlit as st
-import subprocess
-import threading
-import queue
-import sys
+# ==========================================
+# frontend/app.py — Professional Streamlit UI
+# ==========================================
+
 import os
-
-# ==========================================
-# Streamlit App UI
-# ==========================================
-
-st.set_page_config(page_title="AI Research Assistant", layout="wide")
-st.title("📚 AI Research Assistant – Research Pipeline UI")
-
-st.markdown("This UI runs your backend pipeline (`backend/pipeline.py`) "
-            "and streams the cinematic logs live into Streamlit.")
+import sys
 
 # ------------------------------------------
-# User Inputs
+# Ensure project root is importable
 # ------------------------------------------
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
-query = st.text_input("🔍 Enter your research query:")
-num_papers = st.number_input("📄 Number of papers to index", min_value=1, max_value=50, value=5)
+import time
+import streamlit as st
 
-run_btn = st.button("🚀 Run Pipeline")
-
-# This is where logs will appear
-log_box = st.empty()
-
-
-# ==========================================
-# Helper: Stream backend output LIVE
-# ==========================================
-
-def stream_subprocess(process, q):
-    """Reads stdout line-by-line and pushes into a queue."""
-    for line in iter(process.stdout.readline, ''):
-        q.put(line)
-    process.stdout.close()
-    q.put(None)  # signal process complete
+from backend.pipeline import run_pipeline
+from agents.retriever_agent import RetrieverAgent
+from agents.answer_agent import AnswerAgent
+from agents.critique_agent import CritiqueAgent
 
 
 # ==========================================
-# Run pipeline
+# Streamlit Page Configuration
 # ==========================================
+st.set_page_config(
+    page_title="Research Assistant",
+    layout="wide"
+)
 
-if run_btn:
-    if not query.strip():
-        st.error("Please enter a valid research query.")
-        st.stop()
+# Custom CSS
+st.markdown(
+    """
+    <style>
+    .title {
+        font-size: 34px;
+        font-weight: 700;
+        padding-bottom: 8px;
+        margin-bottom: 25px;
+        border-bottom: 1px solid #CCC;
+    }
+    .section-header {
+        font-size: 22px;
+        font-weight: 600;
+        margin-top: 35px;
+        margin-bottom: 8px;
+    }
+    .sub-header {
+        font-size: 18px;
+        font-weight: 500;
+        margin-top: 25px;
+        margin-bottom: 5px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-    BACKEND_FILE = os.path.join("backend", "pipeline.py")
 
-    if not os.path.exists(BACKEND_FILE):
-        st.error("❌ backend/pipeline.py not found! Check your folder structure.")
-        st.stop()
+# ==========================================
+# Header
+# ==========================================
+st.markdown('<div class="title">Research Assistant</div>', unsafe_allow_html=True)
 
-    st.success("⚙️ Starting pipeline… logs will stream below.")
 
-    # Launch backend subprocess
-    process = subprocess.Popen(
-        [sys.executable, BACKEND_FILE],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1
+# ==========================================
+# Sidebar Controls
+# ==========================================
+with st.sidebar:
+    st.header("Configuration")
+
+    query = st.text_area("Research Query", height=120)
+
+    num_papers = st.number_input(
+        "Number of papers to index",
+        min_value=1,
+        max_value=50,
+        value=5
     )
 
-    # Send inputs to backend’s input() calls
-    process.stdin.write(query + "\n")
-    process.stdin.write(str(num_papers) + "\n")
-    process.stdin.flush()
+    run_button = st.button("Run Pipeline")
 
-    # Queue & thread for live output
-    q = queue.Queue()
-    t = threading.Thread(target=stream_subprocess, args=(process, q))
-    t.start()
+    st.markdown("---")
+    st.header("Follow-up Questions")
+    followup_query = st.text_area("Ask a follow-up question")
+    followup_button = st.button("Submit Question")
 
-    logs = ""
 
-    # Stream logs live into Streamlit
-    while True:
-        line = q.get()
-        if line is None:
-            break
-        logs += line
-        log_box.text(logs)
+# ==========================================
+# Main Execution
+# ==========================================
+if run_button:
 
-    process.wait()
-    st.success("🎉 Pipeline finished!")
+    if not query.strip():
+        st.error("Please provide a valid research query.")
+        st.stop()
+
+    st.markdown('<div class="section-header">Indexing Papers</div>', unsafe_allow_html=True)
+
+    progress = st.progress(0)
+    time.sleep(0.1)
+
+    try:
+        # Run indexing (search → download → preprocess → chunk → embed → index)
+        run_pipeline(query, num_papers=num_papers)
+        progress.progress(100)
+        st.success("Indexing phase completed.")
+    except Exception as e:
+        st.error(f"Pipeline execution failed: {e}")
+        st.stop()
+
+    # -----------------------------------------------------
+    # Retrieval + Answer Synthesis Phase
+    # -----------------------------------------------------
+    st.markdown('<div class="section-header">Retrieval and Answer Generation</div>', unsafe_allow_html=True)
+
+    retriever = RetrieverAgent()
+    answerer = AnswerAgent()
+    critiquer = CritiqueAgent()
+
+    st.write("Retrieving relevant chunks...")
+    retrieved = retriever.retrieve(query)
+    st.write(f"{len(retrieved)} chunks retrieved.")
+
+    # Show retrieved chunks
+    with st.expander("View Retrieved Chunks"):
+        for idx, m in enumerate(retrieved, start=1):
+            st.markdown(f"**Chunk {idx} — Score {m['score']:.4f}**")
+            st.write(f"Title: {m['metadata'].get('title', '')}")
+            st.write(m["text"])
+            st.markdown("---")
+
+    # Raw answer
+    st.markdown('<div class="sub-header">Initial Model Answer</div>', unsafe_allow_html=True)
+    raw_answer = answerer.generate_answer(query, retrieved)
+    st.text_area("Raw Answer", raw_answer, height=220)
+
+    # Critiqued refined answer
+    st.markdown('<div class="sub-header">Refined Answer</div>', unsafe_allow_html=True)
+    refined_answer = critiquer.critique(raw_answer)
+    st.text_area("Refined Answer", refined_answer, height=260)
+
+
+# ==========================================
+# Follow-up Questions
+# ==========================================
+if followup_button:
+
+    if not followup_query.strip():
+        st.error("Follow-up question cannot be empty.")
+        st.stop()
+
+    st.markdown('<div class="section-header">Follow-up Answer</div>', unsafe_allow_html=True)
+
+    retriever = RetrieverAgent()
+    answerer = AnswerAgent()
+    critiquer = CritiqueAgent()
+
+    st.write("Retrieving relevant chunks...")
+    retrieved_q = retriever.retrieve(followup_query)
+
+    with st.expander("Retrieved Chunks for Follow-up"):
+        for idx, m in enumerate(retrieved_q, start=1):
+            st.markdown(f"**Chunk {idx} — Score {m['score']:.4f}**")
+            st.write(f"Title: {m['metadata'].get('title', '')}")
+            st.write(m["text"])
+            st.markdown("---")
+
+    raw = answerer.generate_answer(followup_query, retrieved_q)
+    refined = critiquer.critique(raw)
+
+    st.markdown('<div class="sub-header">Raw Answer</div>', unsafe_allow_html=True)
+    st.text_area("Raw", raw, height=200)
+
+    st.markdown('<div class="sub-header">Refined Answer</div>', unsafe_allow_html=True)
+    st.text_area("Refined", refined, height=260)
