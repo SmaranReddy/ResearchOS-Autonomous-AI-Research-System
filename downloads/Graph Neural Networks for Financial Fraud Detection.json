@@ -1,0 +1,6 @@
+{
+  "title": "Graph Neural Networks for Financial Fraud Detection",
+  "url": "https://arxiv.org/pdf/2411.05815.pdf",
+  "chars": 82132,
+  "preview": "Front. Comput. Sci., 2024, 0(0): 1–17\nhttps: //doi.org /10.1007 /s11704-024-40474-y\nREVIEW ARTICLE\nGraph Neural Networks for Financial Fraud Detection: A Review\nDawei Cheng1,2,3, Yao Zou1,3, Sheng Xiang4, Changjun Jiang( B)1,2,3\n1 Department of Computer Science and Technology, Tongji University, Shanghai 200092, China.\n2 Shanghai Artificial Intelligence Laboratory, Shanghai 200031, China.\n3 National Collaborative Innovation Center for Internet Financial Security, Shanghai 100045, China.\n4 AAII, University of Technology Sydney, Sydney, Australia 2007.\n©Higher Education Press 2024\nAbstract The landscape of financial transactions has grown\nincreasingly complex due to the expansion of global eco-\nnomic integration and advancements in information technol-\nogy. This complexity poses greater challenges in detecting\nand managing financial fraud. This review explores the role\nof Graph Neural Networks (GNNs) in addressing these chal-\nlenges by proposing a unified framework that categorizes ex-\ni"
+}

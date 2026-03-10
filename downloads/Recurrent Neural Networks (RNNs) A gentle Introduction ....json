@@ -1,0 +1,6 @@
+{
+  "title": "Recurrent Neural Networks (RNNs): A gentle Introduction ...",
+  "url": "https://arxiv.org/pdf/1912.05911.pdf",
+  "chars": 34099,
+  "preview": "Recurrent Neural Networks (RNNs):\nA gentle Introduction and Overview\nRobin M. Schmidt\nDepartment of Computer Science\nEberhard-Karls-University Tübingen\nTübingen, Germany\nrob.schmidt@student.uni-tuebingen.de\nAbstract\nState-of-the-art solutions in the areas of “Language Modelling & Generating Text”,\n“Speech Recognition”, “Generating Image Descriptions” or “Video Tagging” have\nbeen using Recurrent Neural Networks as the foundation for their approaches.\nUnderstanding the underlying concepts is therefore of tremendous importance if\nwe want to keep up with recent or upcoming publications in those areas. In this\nwork we give a short overview over some of the most important concepts in the\nrealm of Recurrent Neural Networks which enables readers to easily understand\nthe fundamentals such as but not limited to “Backpropagation through Time” or\n“Long Short-Term Memory Units” as well as some of the more recent advances like\nthe “Attention Mechanism” or “Pointer Networks”. We also give recommendat"
+}

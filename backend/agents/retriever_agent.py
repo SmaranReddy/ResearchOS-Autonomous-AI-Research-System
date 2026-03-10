@@ -1,5 +1,5 @@
 # ==========================================
-# backend/agents/retriever_agent.py (Fixed)
+# backend/agents/retriever_agent.py (Final Fixed)
 # ==========================================
 import google.generativeai as genai
 from pinecone import Pinecone
@@ -22,12 +22,16 @@ class RetrieverAgent:
         result = genai.embed_content(model=self.embed_model, content=text)
         return result["embedding"]
 
-    def retrieve(self, query: str, top_k: int = 5):
+    def retrieve(self, query: str, top_k: int = 10):
         """Retrieve top relevant chunks for the query"""
-        query_vector = self.embed_query(query)  # ✅ FIXED — embed before querying
+        # ✅ Automatically expand short or vague queries
+        if len(query.split()) <= 2:
+            query = f"Comprehensive explanation and latest research on {query} in deep learning"
+
+        query_vector = self.embed_query(query)
 
         response = self.index.query(
-            namespace="research-papers",  # matches your index namespace
+            namespace="research-papers",
             vector=query_vector,
             top_k=top_k,
             include_metadata=True

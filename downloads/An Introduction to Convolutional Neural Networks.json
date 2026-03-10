@@ -1,0 +1,6 @@
+{
+  "title": "An Introduction to Convolutional Neural Networks",
+  "url": "https://arxiv.org/pdf/1511.08458.pdf",
+  "chars": 25655,
+  "preview": "An Introduction to Convolutional Neural Networks\nKeiron O’Shea1and Ryan Nash2\n1Department of Computer Science, Aberystwyth University, Ceredigion, SY23 3DB\nkeo7@aber.ac.uk\n2School of Computing and Communications, Lancaster University, Lancashire, LA1\n4YW\nnashrd@live.lancs.ac.uk\nAbstract. The ﬁeld of machine learning has taken a dramatic twist in re-\ncent times, with the rise of the Artiﬁcial Neural Network (ANN). These\nbiologically inspired computational models are able to far exceed the per-\nformance of previous forms of artiﬁcial intelligence in common machine\nlearning tasks. One of the most impressive forms of ANN architecture is\nthat of the Convolutional Neural Network (CNN). CNNs are primarily\nused to solve difﬁcult image-driven pattern recognition tasks and with\ntheir precise yet simple architecture, offers a simpliﬁed method of getting\nstarted with ANNs.\nThis document provides a brief introduction to CNNs, discussing recently\npublished papers and newly formed techniques in devel"
+}

@@ -1,0 +1,6 @@
+{
+  "title": "A Comprehensive Survey of Convolutions in Deep Learning",
+  "url": "https://arxiv.org/pdf/2402.15490.pdf",
+  "chars": 235834,
+  "preview": "1\nA Comprehensive Survey of Convolutions in Deep\nLearning: Applications, Challenges, and Future\nTrends\nAbolfazl Younesi∗, Mohsen Ansari∗, MohammadAmin Fazli∗, Alireza Ejlali∗, Muhammad Shafique†, and J ¨org\nHenkel‡\nAbstract —In today’s digital age, Convolutional Neural Net-\nworks (CNNs), a subset of Deep Learning (DL), are widely used\nfor various computer vision tasks such as image classification,\nobject detection, and image segmentation. There are numerous\ntypes of CNNs designed to meet specific needs and requirements,\nincluding 1D, 2D, and 3D CNNs, as well as dilated, grouped,\nattention, depthwise convolutions, and NAS, among others. Each\ntype of CNN has its unique structure and characteristics, making\nit suitable for specific tasks. It’s crucial to gain a thorough\nunderstanding and perform a comparative analysis of these\ndifferent CNN types to understand their strengths and weak-\nnesses. Furthermore, studying the performance, limitations, and\npractical applications of each type of C"
+}

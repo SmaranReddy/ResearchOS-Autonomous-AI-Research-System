@@ -1,0 +1,6 @@
+{
+  "title": "A Comprehensive Survey of Dynamic Graph Neural ...",
+  "url": "https://arxiv.org/pdf/2405.00476.pdf",
+  "chars": 113398,
+  "preview": "A Comprehensive Survey of Dynamic Graph Neural Networks:\nModels, Frameworks, Benchmarks, Experiments and Challenges\nZhengZhao Feng1, Rui Wang1,2,∗, TianXing Wang1, Mingli Song1,3, Sai Wu2,1, Shuibing He1\n1Zhejiang University, Hangzhou, China\n2Hangzhou High-Tech Zone (Binjiang) Institute of Blockchain and Data Security, Hangzhou, China\n3Shanghai Institute for Advanced Study, Zhejiang University, Shanghai, China\n{fengzhengzhao,rwang21,tianxingwang,brooksong,wusai,heshuibing}@zju.edu.cn\nABSTRACT\nDynamic Graph Neural Networks (GNNs) combine temporal infor-\nmation with GNNs to capture structural, temporal, and contextual\nrelationships in dynamic graphs simultaneously, leading to en-\nhanced performance in various applications. As the demand for\ndynamic GNNs continues to grow, numerous models and frame-\nworks have emerged to cater to different application needs. There is\na pressing need for a comprehensive survey that evaluates the per-\nformance, strengths, and limitations of various approach"
+}

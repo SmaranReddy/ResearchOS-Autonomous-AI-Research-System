@@ -1,0 +1,6 @@
+{
+  "title": "[2410.01201] Were RNNs All We Needed?",
+  "url": "https://arxiv.org/pdf/2410.01201.pdf",
+  "chars": 72544,
+  "preview": "Were RNNs All We Needed?\nLeo Feng\nMila – Universit ´e de Montr ´eal & Borealis AI\nleo.feng@mila.quebecFrederick Tung\nBorealis AI\nfrederick.tung@borealisai.com\nMohamed Osama Ahmed\nBorealis AI\nmohamed.o.ahmed@borealisai.comYoshua Bengio\nMila – Universit ´e de Montr ´eal\nyoshua.bengio@mila.quebec\nHossein Hajimirsadeghi\nBorealis AI\nhossein.hajimirsadeghi@borealisai.com\nAbstract\nThe introduction of Transformers in 2017 reshaped the landscape of deep learning.\nOriginally proposed for sequence modelling, Transformers have since achieved\nwidespread success across various domains. However, the scalability limitations\nof Transformers—particularly with respect to sequence length—have sparked re-\nnewed interest in novel recurrent models that are parallelizable during training,\noffer comparable performance, and scale more effectively. In this work, we revisit\nsequence modelling from a historical perspective, focusing on Recurrent Neural\nNetworks (RNNs), which dominated the field for two decades bef"
+}
