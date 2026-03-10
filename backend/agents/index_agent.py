@@ -1,97 +1,59 @@
 # ==========================================
-# backend/agents/index_agent.py
+# backend/agents/index_agent.py  (FIXED)
 # ==========================================
 import os
 from pinecone import Pinecone, ServerlessSpec
 from dotenv import load_dotenv
 
-
 class IndexAgent:
-    """
-    Handles inserting (upserting) vector embeddings into a Pinecone index.
-    Supports both single-chunk and multi-chunk (batch) uploads.
-    """
-
-    def __init__(self, index_name="research-papers"):
+    def __init__(self, index_name="re-search"):
         load_dotenv()
         api_key = os.getenv("PINECONE_API_KEY")
         if not api_key:
             raise ValueError("❌ Missing PINECONE_API_KEY in .env file")
 
-        # ✅ Initialize Pinecone client
         self.pc = Pinecone(api_key=api_key)
         self.index_name = index_name
 
-        # ✅ Create index if it doesn't exist
+        # ❗ FIX: correct embedding dimension for Google text-embedding-004
         if self.index_name not in self.pc.list_indexes().names():
             print(f"⚙️ Creating Pinecone index: {self.index_name} ...")
             self.pc.create_index(
                 name=self.index_name,
-                dimension=768,  # For Google text-embedding-004
+                dimension=768,  # ❗ FIXED
                 metric="cosine",
                 spec=ServerlessSpec(cloud="aws", region="us-east-1"),
             )
         else:
             print(f"ℹ️ Pinecone index '{self.index_name}' already exists — using it.")
 
-        # ✅ Connect to the index
         self.index = self.pc.Index(self.index_name)
         print(f"✅ Pinecone index '{self.index_name}' connected.\n")
 
-    # ==========================================================
-    # 🧩 Upsert a single chunk (legacy support)
-    # ==========================================================
-    def upsert_paper(self, meta: dict, emb: list[float]):
-        """
-        Upload a single chunk embedding with metadata.
-        """
-        try:
-            self.index.upsert(
-                vectors=[
-                    {
-                        "id": f"{meta['title']}_{meta['chunk_id']}",
-                        "values": emb,
-                        "metadata": meta,
-                    }
-                ]
-            )
-            print(f"✅ Upsert OK for chunk {meta['chunk_id']}")
-            return True
-        except Exception as e:
-            print(f"⚠️ Upsert failed: {e}")
-            return False
-
-    # ==========================================================
-    # ⚡ Batch index multiple chunks for one paper
-    # ==========================================================
+    # ------------------------------------------
+    # BATCH INDEX — FIXED
+    # ------------------------------------------
     def index_chunks(self, title: str, chunks: list[str], embeddings: list[list[float]]):
-        """
-        Efficiently upserts all chunks of a single paper into Pinecone.
-        """
         if not chunks or not embeddings:
             print(f"⚠️ No chunks/embeddings to index for '{title}'.")
             return
 
         vectors = []
         for i, (chunk, emb) in enumerate(zip(chunks, embeddings), start=1):
-            if not emb:  # Skip failed embeddings
-                continue
             meta = {
                 "title": title,
                 "chunk_id": i,
-                "text_preview": chunk[:200] + "...",
+                "text": chunk,  # ❗ FIX — store full text
             }
-            vectors.append(
-                {
-                    "id": f"{title}_{i}",
-                    "values": emb,
-                    "metadata": meta,
-                }
-            )
+            vectors.append({
+                "id": f"{title}_{i}",
+                "values": emb,
+                "metadata": meta,
+            })
 
         try:
             print(f"📤 Uploading {len(vectors)} chunks for: {title}")
-            self.index.upsert(vectors=vectors, namespace="research-papers")
+            self.index.upsert(vectors=vectors, namespace="default")
             print(f"✅ Indexed {len(vectors)} chunks for: {title}\n")
         except Exception as e:
             print(f"⚠️ Batch upsert failed for '{title}': {e}")

@@ -163,3 +163,4 @@ if __name__ == "__main__":
         visualize_graph(graph_data)
         print("🎯 Done! Run this in Neo4j Browser:")
         print("   MATCH (n)-[r]->(m) RETURN n,r,m;")
+    

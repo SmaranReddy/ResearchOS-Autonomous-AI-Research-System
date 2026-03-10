@@ -1,135 +1,177 @@
-import streamlit as st
+# ==========================================
+# frontend/app.py — Professional Streamlit UI
+# ==========================================
+
 import os
 import sys
-import io
-import json
-from contextlib import redirect_stdout
 
-# ---------------------------------------------------------------------
-# 🧩 Fix Import Path (important)
-# ---------------------------------------------------------------------
-# Add the project root (parent of frontend/) to Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# ------------------------------------------
+# Ensure project root is importable
+# ------------------------------------------
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
-# Now you can import from backend/
-from backend.pipeline import main as run_pipeline
+import time
+import streamlit as st
+
+from backend.pipeline import run_pipeline
+from agents.retriever_agent import RetrieverAgent
+from agents.answer_agent import AnswerAgent
+from agents.critique_agent import CritiqueAgent
 
 
-# ---------------------------------------------------------------------
-# 🎨 Streamlit Page Configuration
-# ---------------------------------------------------------------------
+# ==========================================
+# Streamlit Page Configuration
+# ==========================================
 st.set_page_config(
-    page_title="Tavily Research Assistant",
-    page_icon="🧠",
-    layout="wide",
+    page_title="Research Assistant",
+    layout="wide"
 )
 
-# ---------------------------------------------------------------------
-# 🧠 Header Section
-# ---------------------------------------------------------------------
-st.title("🧠 Tavily Research Assistant")
-st.markdown("""
-Welcome to your **AI-Powered Research Pipeline**!  
-This app automates your research process by:
-1. Searching for papers via Tavily  
-2. Downloading and extracting text  
-3. Cleaning, tokenizing, and chunking content  
-4. Summarizing key sections  
-5. Embedding and indexing results for retrieval
-
----
-""")
-
-# ---------------------------------------------------------------------
-# 🔍 User Input
-# ---------------------------------------------------------------------
-query = st.text_input(
-    "Enter your research query:",
-    placeholder="e.g. Graph neural networks in molecular biology"
+# Custom CSS
+st.markdown(
+    """
+    <style>
+    .title {
+        font-size: 34px;
+        font-weight: 700;
+        padding-bottom: 8px;
+        margin-bottom: 25px;
+        border-bottom: 1px solid #CCC;
+    }
+    .section-header {
+        font-size: 22px;
+        font-weight: 600;
+        margin-top: 35px;
+        margin-bottom: 8px;
+    }
+    .sub-header {
+        font-size: 18px;
+        font-weight: 500;
+        margin-top: 25px;
+        margin-bottom: 5px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
-# ---------------------------------------------------------------------
-# 🚀 Run Button
-# ---------------------------------------------------------------------
-if st.button("🚀 Run Research Pipeline", use_container_width=True):
+
+# ==========================================
+# Header
+# ==========================================
+st.markdown('<div class="title">Research Assistant</div>', unsafe_allow_html=True)
+
+
+# ==========================================
+# Sidebar Controls
+# ==========================================
+with st.sidebar:
+    st.header("Configuration")
+
+    query = st.text_area("Research Query", height=120)
+
+    num_papers = st.number_input(
+        "Number of papers to index",
+        min_value=1,
+        max_value=50,
+        value=5
+    )
+
+    run_button = st.button("Run Pipeline")
+
+    st.markdown("---")
+    st.header("Follow-up Questions")
+    followup_query = st.text_area("Ask a follow-up question")
+    followup_button = st.button("Submit Question")
+
+
+# ==========================================
+# Main Execution
+# ==========================================
+if run_button:
+
     if not query.strip():
-        st.warning("Please enter a query first.")
+        st.error("Please provide a valid research query.")
         st.stop()
 
-    # Display spinner and capture output
-    with st.spinner("Running Tavily Research Pipeline... Please wait ⏳"):
-        buffer = io.StringIO()
-        with redirect_stdout(buffer):
-            try:
-                run_pipeline(query)
-            except Exception as e:
-                st.error(f"Pipeline execution failed: {e}")
+    st.markdown('<div class="section-header">Indexing Papers</div>', unsafe_allow_html=True)
 
-    # -----------------------------------------------------------------
-    # 🧾 Show Logs
-    # -----------------------------------------------------------------
-    st.subheader("🧾 Pipeline Execution Logs")
-    st.text_area("Execution Log", buffer.getvalue(), height=350)
+    progress = st.progress(0)
+    time.sleep(0.1)
 
-    # -----------------------------------------------------------------
-    # 📂 Load Output JSON (if exists)
-    # -----------------------------------------------------------------
-    safe_name = query.replace(" ", "_").replace("/", "_")
-    json_path = os.path.join("downloads", f"{safe_name}.json")
+    try:
+        # Run indexing (search → download → preprocess → chunk → embed → index)
+        run_pipeline(query, num_papers=num_papers)
+        progress.progress(100)
+        st.success("Indexing phase completed.")
+    except Exception as e:
+        st.error(f"Pipeline execution failed: {e}")
+        st.stop()
 
-    if os.path.exists(json_path):
-        with open(json_path, "r", encoding="utf-8") as f:
-            paper_data = json.load(f)
+    # -----------------------------------------------------
+    # Retrieval + Answer Synthesis Phase
+    # -----------------------------------------------------
+    st.markdown('<div class="section-header">Retrieval and Answer Generation</div>', unsafe_allow_html=True)
 
-        st.success("✅ Research pipeline completed successfully!")
+    retriever = RetrieverAgent()
+    answerer = AnswerAgent()
+    critiquer = CritiqueAgent()
 
-        # -------------------------------------------------------------
-        # 📘 Paper Details
-        # -------------------------------------------------------------
-        st.subheader("📘 Paper Details")
-        st.write(f"**Title:** {paper_data.get('title', 'N/A')}")
-        st.write(f"**Link:** [{paper_data.get('link', 'N/A')}]({paper_data.get('link', '#')})")
+    st.write("Retrieving relevant chunks...")
+    retrieved = retriever.retrieve(query)
+    st.write(f"{len(retrieved)} chunks retrieved.")
 
-        # -------------------------------------------------------------
-        # 📝 Summary
-        # -------------------------------------------------------------
-        if "summary_structured" in paper_data:
-            st.subheader("📝 Summary")
-            st.write(paper_data["summary_structured"])
+    # Show retrieved chunks
+    with st.expander("View Retrieved Chunks"):
+        for idx, m in enumerate(retrieved, start=1):
+            st.markdown(f"**Chunk {idx} — Score {m['score']:.4f}**")
+            st.write(f"Title: {m['metadata'].get('title', '')}")
+            st.write(m["text"])
+            st.markdown("---")
 
-        # -------------------------------------------------------------
-        # 📄 Extracted Full Text
-        # -------------------------------------------------------------
-        with st.expander("📄 View Extracted Full Text"):
-            st.text_area(
-                "Full Text",
-                paper_data.get("full_text", "No extracted text available."),
-                height=300
-            )
+    # Raw answer
+    st.markdown('<div class="sub-header">Initial Model Answer</div>', unsafe_allow_html=True)
+    raw_answer = answerer.generate_answer(query, retrieved)
+    st.text_area("Raw Answer", raw_answer, height=220)
 
-        # -------------------------------------------------------------
-        # 💾 Download Button
-        # -------------------------------------------------------------
-        st.download_button(
-            label="💾 Download Paper JSON",
-            data=json.dumps(paper_data, ensure_ascii=False, indent=2),
-            file_name=f"{safe_name}.json",
-            mime="application/json",
-        )
-    else:
-        st.warning("⚠️ No paper JSON found. The pipeline may have stopped early.")
+    # Critiqued refined answer
+    st.markdown('<div class="sub-header">Refined Answer</div>', unsafe_allow_html=True)
+    refined_answer = critiquer.critique(raw_answer)
+    st.text_area("Refined Answer", refined_answer, height=260)
 
-# ---------------------------------------------------------------------
-# 📚 Sidebar
-# ---------------------------------------------------------------------
-st.sidebar.header("ℹ️ About")
-st.sidebar.markdown("""
-**Tavily AI Research Assistant**  
-Built with:
-- 🧠 Python + Streamlit  
-- 🔍 Tavily API  
-- 🧩 Pinecone + LangChain-style multi-agent pipeline  
 
-Use this app to automate literature search, summarization, and indexing.  
-Ideal for students, researchers, and AI developers.
-""")
+# ==========================================
+# Follow-up Questions
+# ==========================================
+if followup_button:
+
+    if not followup_query.strip():
+        st.error("Follow-up question cannot be empty.")
+        st.stop()
+
+    st.markdown('<div class="section-header">Follow-up Answer</div>', unsafe_allow_html=True)
+
+    retriever = RetrieverAgent()
+    answerer = AnswerAgent()
+    critiquer = CritiqueAgent()
+
+    st.write("Retrieving relevant chunks...")
+    retrieved_q = retriever.retrieve(followup_query)
+
+    with st.expander("Retrieved Chunks for Follow-up"):
+        for idx, m in enumerate(retrieved_q, start=1):
+            st.markdown(f"**Chunk {idx} — Score {m['score']:.4f}**")
+            st.write(f"Title: {m['metadata'].get('title', '')}")
+            st.write(m["text"])
+            st.markdown("---")
+
+    raw = answerer.generate_answer(followup_query, retrieved_q)
+    refined = critiquer.critique(raw)
+
+    st.markdown('<div class="sub-header">Raw Answer</div>', unsafe_allow_html=True)
+    st.text_area("Raw", raw, height=200)
+
+    st.markdown('<div class="sub-header">Refined Answer</div>', unsafe_allow_html=True)
+    st.text_area("Refined", refined, height=260)

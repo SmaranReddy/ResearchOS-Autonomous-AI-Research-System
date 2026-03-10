@@ -1,6 +1,0 @@
-{
-  "title": "[2105.06756] Long Short-term Memory RNN",
-  "url": "https://arxiv.org/pdf/2105.06756.pdf",
-  "chars": 37710,
-  "preview": "Department of Computer Science\nTDT4173 - Assignment 1\nTime Series\nLong Short-term Memory RNN\nGroup:\nGroup 8 - Time Series\nAuthors:\nAdrian Kj\u001arran (adriankj)\nErling Stray Bugge (erlinsb)\nChristian Bakke Venner\u001cd (christbv)\nMay 17, 2021arXiv:2105.06756v1  [cs.LG]  14 May 2021Abstract\nThis paper is the \frst assignment in the course Machine Learning TDT4173, fall 2020. The\nproject was conducted by reading through some of the latest developments within time-series\nforecasting methods in the scienti\fc community over the past 5 years. The result is a summary\nof the essential aspects.\nIn this paper, we introduce an LSTM cell's architecture and explain how di\u000berent com-\nponents go together to alter the cell's memory and predict the output. Also, the paper\nprovides the necessary formulas and foundations to calculate a forward iteration through an\nLSTM. Then, the paper refers to applications and research that emphasize the strengths and\nopportunities of LSTMs, shown within the time-series domain "
-}

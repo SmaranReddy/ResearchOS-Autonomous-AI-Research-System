@@ -1,6 +1,0 @@
-{
-  "title": "Generative adversarial networks: A comprehensive review ...",
-  "url": "https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=11090063",
-  "chars": 114678,
-  "preview": "Vol.116 (3) September 2025 SOUTH AFRICAN INSTITUTE OF ELECTRICAL ENGINEERS1011\nGenerative Adversarial Networks: A\nComprehensive Review and the Way Forward\nBoriane Y. TchaleuID, Alain R. NdjiongueID,Senior Member, IEEE, and Collins A. LekeID\nAbstract —The deep learning ability to recognize patterns in\ndata has recently become popular within education. Created in\n2014, generative adversarial networks (GANs) are innovative\nclasses of deep learning generative models based on game\ntheory and consist of two players. GANs generate data from\nscratch using two neural networks: the generator and the\ndiscriminator. Since their creation, GANs have been utilized\nin many applications and have advantages and disadvantages.\nIn light of such a long journey, evaluating the technology is\nessential as it provides readers with the way forward. To this\nend, this paper reviews GANs and explores some fundamental\nchallenges that develop during evaluation and training. We\nalso discuss GANs’ challenges and elabo"
-}

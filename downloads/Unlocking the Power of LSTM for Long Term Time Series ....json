@@ -1,6 +1,0 @@
-{
-  "title": "Unlocking the Power of LSTM for Long Term Time Series ...",
-  "url": "https://arxiv.org/pdf/2408.10006.pdf",
-  "chars": 42432,
-  "preview": "Unlocking the Power of LSTM for Long Term Time Series Forecasting\nYaxuan Kong1*, Zepu Wang2 5*, Yuqi Nie3, Tian Zhou4, Stefan Zohren1, Yuxuan Liang2†,\nPeng Sun5†, Qingsong Wen6\n1University of Oxford\n2The Hong Kong University of Science and Technology (Guangzhou)\n3Princeton University\n4Alibaba Group\n5Duke Kunshan University\n6Squirrel AI\nyaxuan.kong@eng.ox.ac.uk, zw163@duke.edu\nAbstract\nTraditional recurrent neural network architectures, such as\nlong short-term memory neural networks (LSTM), have his-\ntorically held a prominent role in time series forecasting\n(TSF) tasks. While the recently introduced sLSTM for Natu-\nral Language Processing (NLP) introduces exponential gating\nand memory mixing that are beneficial for long term sequen-\ntial learning, its potential short memory issue is a barrier to\napplying sLSTM directly in TSF. To address this, we pro-\npose a simple yet efficient algorithm named P-sLSTM, which\nis built upon sLSTM by incorporating patching and chan-\nnel independence. The"
-}

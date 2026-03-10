@@ -1,6 +1,0 @@
-{
-  "title": "LSTM-Based Text Generation: A Study on Historical Datasets",
-  "url": "https://arxiv.org/pdf/2403.07087.pdf",
-  "chars": 22914,
-  "preview": "16TH INTERNATIONAL İSTANBUL SCIENTIFIC RESEARCH CONGRESS ON LIFE, \nENGINEERING, ARCHITECTURE, AND MATHEMATICAL SCIENCES PROCEEDINGS BOOK ISBN: 978-625-6879-50-8DOI: 10.5281/ zenODO.10776102  \n42LSTMȺBASED TEÃT GENERATIONȣ A STUDÄ ON \nHISTORICAL DATASETS \nMustafa Abbas Hussein Hussein1*, Serkan Savaş2 \n*1Çankırı Karatekin University, Graduate School of Natural and Applied Sciences, Department of Electronics and Computer \nEngineering, Çankırı, Türkiye. ORCID Code: 0009-0002-9219-5695\n2Kırıkkale University, Faculty of Engineering and Natural Sciences, Department of Computer Engineering, Kırıkkale, \nTürkiye. ORCID Code: 0000-0003-3440-6271\n \nABSTRACT\nThis paper presents an exploration of Long Short-Term Memory (LSTM) networks in the realm of \ntext generation, focusing on the utilization of historical datasets for Shakespeare and Nietzsche. LSTMs, \nknown for their effectiveness in handling sequential data, are applied here to model complex language \npatterns and structures inherent in histo"
-}

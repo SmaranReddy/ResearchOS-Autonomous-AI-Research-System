@@ -1,46 +1,62 @@
 # ==========================================
-# backend/agents/retriever_agent.py (Final Fixed)
+# backend/agents/retriever_agent.py (Fixed)
 # ==========================================
 import google.generativeai as genai
 from pinecone import Pinecone
 import os
+from typing import List, Dict, Any, Optional
 
 class RetrieverAgent:
     def __init__(self):
-        # Initialize Pinecone
         pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-        self.index = pc.Index("research-papers")
+        self.index = pc.Index("re-search")
         print("✅ RetrieverAgent connected to Pinecone index.")
 
-        # Initialize Google embedding model
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
         self.embed_model = "models/text-embedding-004"
         print("✅ Google embedding model initialized for retrieval.")
 
     def embed_query(self, text: str):
-        """Convert query text into vector embedding"""
         result = genai.embed_content(model=self.embed_model, content=text)
         return result["embedding"]
 
-    def retrieve(self, query: str, top_k: int = 10):
+    def retrieve(self, query: str, top_k: int = 5):
         """Retrieve top relevant chunks for the query"""
-        # ✅ Automatically expand short or vague queries
-        if len(query.split()) <= 2:
-            query = f"Comprehensive explanation and latest research on {query} in deep learning"
-
-        query_vector = self.embed_query(query)
+        query_vector = self.embed_query(query)  # ✅ FIXED — embed before querying
 
         response = self.index.query(
-            namespace="research-papers",
+            namespace="research-papers",  # matches your index namespace
             vector=query_vector,
             top_k=top_k,
             include_metadata=True
         )
 
-        results = []
+        matches = []
         for match in response.get("matches", []):
-            metadata = match.get("metadata", {})
-            text = metadata.get("text", "")
-            if text.strip():
-                results.append(text)
-        return results
+            # Pinecone returns match['id'], match['score'], match['metadata']
+            meta = match.get("metadata", {}) or {}
+            text = meta.get("text", "") or ""
+            matches.append({
+                "id": match.get("id"),
+                "score": match.get("score"),
+                "metadata": meta,
+                "text": text
+            })
+
+        # optional: filter by min_score
+        if min_score is not None:
+            matches = [m for m in matches if (m["score"] or 0) >= min_score]
+
+        # optional: apply per-paper cap (if 'title' exists in metadata)
+        if per_paper_cap is not None:
+            capped = []
+            counts = {}
+            for m in matches:
+                title = (m["metadata"] or {}).get("title", "unknown")
+                if counts.get(title, 0) < per_paper_cap:
+                    capped.append(m)
+                    counts[title] = counts.get(title, 0) + 1
+            matches = capped
+
+        print(f"🔎 Retrieved {len(matches)} matches (requested top_k={top_k}).")
+        return matches

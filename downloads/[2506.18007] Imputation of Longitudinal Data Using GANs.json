@@ -1,6 +1,0 @@
-{
-  "title": "[2506.18007] Imputation of Longitudinal Data Using GANs",
-  "url": "https://arxiv.org/pdf/2506.18007.pdf",
-  "chars": 207958,
-  "preview": "arXiv:2506.18007v1  [cs.LG]  22 Jun 2025Imputation of Longitudinal Data Using GANs:\nChallenges and Implications for Classification\n1. Sharon Torao Pingi*\n2. Md Abul Bashar ,3. Richi Nayak\nSchool of Computer Science & Centre for Data\nScience\nQueensland University of Technology\nsharon.torao@hdr.qut.edu.au ,\nm1.bashar@qut.edu.au ,r.nayak@qut.edu.au\nAbstract\nLongitudinal data is commonly utilised across various domains,\nsuch as health, biomedical, education and survey studies. This ubiq-\nuity has led to a rise in statistical, machine and deep learning-based\nmethods for Longitudinal Data Classification (LDC). However, the in-\ntricate nature of the data, characterised by its multi-dimensionality,\ncauses instance-level heterogeneity and temporal correlations that add\nto the complexity of longitudinal data analysis. Additionally, LDC\naccuracy is often hampered by the pervasiveness of missing values in\nlongitudinal data. Despite ongoing research that draw on the gener-\native power and utility o"
-}

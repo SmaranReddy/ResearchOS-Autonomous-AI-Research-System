@@ -38,7 +38,7 @@ except Exception as e:
 # -----------------------------
 # Step 3: Count all records in namespace
 # -----------------------------
-namespace = "research-papers"  # change this if needed
+namespace = "re-search"  # change this if needed
 
 try:
     print(f"🔍 Listing all vector IDs from namespace '{namespace}'...")
