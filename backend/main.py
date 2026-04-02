@@ -19,6 +19,6 @@ from core.executor import run_pipeline
 if __name__ == "__main__":
     query = "Explain transformers in deep learning"
     print(f"\nQuery: {query}\n")
-    answer = run_pipeline(query, num_papers=2)
+    answer, _ = run_pipeline(query, num_papers=5)
     print("\n=== FINAL ANSWER ===")
     print(answer)

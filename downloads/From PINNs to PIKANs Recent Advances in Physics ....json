@@ -1,6 +1,0 @@
-{
-  "title": "From PINNs to PIKANs: Recent Advances in Physics ...",
-  "url": "https://arxiv.org/pdf/2410.13228.pdf",
-  "chars": 221970,
-  "preview": "From PINNs to PIKANs: Recent Advances in\nPhysics-Informed Machine Learning\nJuan Diego Toscanoa,1, Vivek Oommenb,1, Alan John Vargheseb,1, Zongren Zoua,\nNazanin Ahmadi Daryakenarib,c, Chenxi Wub, George Em Karniadakisa,b,2\naDivision of Applied Mathematics, Brown University, Providence, 02912, RI, USA\nbSchool of Engineering, Brown University, Providence, 02912, RI, USA\ncCenter for Biomedical Engineering, Brown University, Providence, 02912, RI, USA\nAbstract\nPhysics-Informed Neural Networks (PINNs) have emerged as a key tool in Scientific\nMachine Learning since their introduction in 2017, enabling the efficient solution of or-\ndinary and partial differential equations using sparse measurements. Over the past few\nyears, significant advancements have been made in the training and optimization of\nPINNs, covering aspects such as network architectures, adaptive refinement, domain\ndecomposition, and the use of adaptive weights and activation functions. A notable\nrecent development is the Physic"
-}

@@ -1,6 +1,0 @@
-{
-  "title": "A review of graph neural network applications in ...",
-  "url": "https://arxiv.org/pdf/2407.11060.pdf",
-  "chars": 142286,
-  "preview": "A review of graph neural network applications in mechanics -related domains  \n \n \nYingxue Zhao  1, Haoran Li  1, Haosu Zhou  1, Hamid Reza Attar  1, Tobias Pfaff  2, Nan Li  1* \n1 Dyson School of Design Engineering, Imperial College London, London , UK \n2 Google DeepMind, London, UK  \n∗ Corresponding author. E -mail address: n.li09@imperial.ac.uk (N. Li)  \n \n \n \n \n \n \n \n \n \n \nAbstract  \nMechanics -related  problems often present unique challenges in achieving  accurate geometric and physical representations, \nparticularly for non-uniform structures. Graph neural networks (GNNs) have emerged as a promising tool to tackle these \nchallenges by adeptly learning from graph data with irregular underlying structures. Consequently, recent years have \nwitnessed a surge in complex mechanics -related applications inspired by the advance ments of GNNs. Despite this process, \nthere is a notable absence of a systematic review addressing the recent advancement of GNNs in solving mec hanics -\nrelated "
-}

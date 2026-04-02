@@ -15,9 +15,10 @@ class State:
         self.final_message: Optional[str] = None
 
         # --- retrieval ---
-        self.rewritten_query: str = ""
+        self.rewritten_queries: List[str] = []  # [original, HyDE, variation1, ...]
         self.raw_docs: List[Dict] = []
         self.ranked_docs: List[Dict] = []
 
         # --- answer ---
         self.final_answer: str = ""
+        self.chat_history: List[Dict] = []  # [{"query": ..., "answer": ...}]

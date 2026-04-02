@@ -17,4 +17,5 @@ def get_plan() -> List[str]:
         "retrieve",
         "rerank",
         "answer",
+        "critique",
     ]

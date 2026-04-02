@@ -1,6 +1,0 @@
-{
-  "title": "A Comprehensive Survey on Graph Neural Networks",
-  "url": "https://arxiv.org/pdf/1901.00596.pdf",
-  "chars": 132628,
-  "preview": "JOURNAL OF L ATEX CLASS FILES, VOL. XX, NO. XX, AUGUST 2019 1\nA Comprehensive Survey on Graph Neural\nNetworks\nZonghan Wu, Shirui Pan, Member, IEEE , Fengwen Chen, Guodong Long,\nChengqi Zhang, Senior Member, IEEE , Philip S. Yu, Fellow, IEEE\nAbstract —Deep learning has revolutionized many machine\nlearning tasks in recent years, ranging from image classiﬁcation\nand video processing to speech recognition and natural language\nunderstanding. The data in these tasks are typically represented\nin the Euclidean space. However, there is an increasing number\nof applications where data are generated from non-Euclidean do-\nmains and are represented as graphs with complex relationships\nand interdependency between objects. The complexity of graph\ndata has imposed signiﬁcant challenges on existing machine\nlearning algorithms. Recently, many studies on extending deep\nlearning approaches for graph data have emerged. In this survey,\nwe provide a comprehensive overview of graph neural networks\n(GNNs) in d"
-}

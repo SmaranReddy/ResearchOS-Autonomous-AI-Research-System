@@ -1,6 +1,0 @@
-{
-  "title": "[2201.05624] Scientific Machine Learning through Physics- ...",
-  "url": "https://arxiv.org/pdf/2201.05624.pdf",
-  "chars": 217561,
-  "preview": "Scienti\fc Machine Learning through\nPhysics-Informed Neural Networks: Where\nwe are and What's next\nSalvatore Cuomo1, Vincenzo Schiano Di Cola2*, Fabio\nGiampaolo1, Gianluigi Rozza2, Maziar Raissi3and Francesco\nPiccialli1*\n1*Department of Mathematics and Applications \"R. Caccioppoli\",\nUniversity of Naples Federico II, Napoli, 80126, Italy .\n2*Department of Electrical Engineering and Information\nTechnology, University of Naples Federico II, Via Claudio,\nNapoli, 80125, Italy .\n2SISSA { International School for Advanced Studies, Street, City,\n10587, Italy.\n3Department of Applied Mathematics, University of Colorado\nBoulder, Street, Boulder, 610101, United States.\n*Corresponding author(s). E-mail(s):\nvincenzo.schianodicola@unina.it; francesco.piccialli@unina.it;\nContributing authors: salvatore.cuomo@unina.it;\nfabio.giampaolo@unina.it; grozza@sissa.it;\nmara4513@colorado.edu;\nAbstract\nPhysics-Informed Neural Networks (PINN) are neural networks (NNs)\nthat encode model equations, like Partial Di\u000be"
-}

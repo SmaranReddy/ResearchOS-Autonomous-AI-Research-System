@@ -1,6 +1,0 @@
-{
-  "title": "Recurrent Neural Networks and Long Short-Term Memory ...",
-  "url": "https://arxiv.org/pdf/2304.11461.pdf",
-  "chars": 55906,
-  "preview": "To appear as a part of an upcoming textbook on deep learning.\nRecurrent Neural Networks and Long Short-Term Memory Networks:\nTutorial and Survey\nBenyamin Ghojogh BGHOJOGH @UWATERLOO .CA\nAli Ghodsi ALI.GHODSI @UWATERLOO .CA\nDepartment of Statistics and Actuarial Science & David R. Cheriton School of Computer Science,\nData Analytics Laboratory, University of Waterloo, Waterloo, ON, Canada\nYouTube channel of Benyamin Ghojogh: https://www.youtube.com/@bghojogh\nYouTube channel of Ali Ghodsi: https://www.youtube.com/@DataScienceCoursesUW\nAbstract\nThis is a tutorial paper on Recurrent Neural Net-\nwork (RNN), Long Short-Term Memory Net-\nwork (LSTM), and their variants. We start with a\ndynamical system and backpropagation through\ntime for RNN. Then, we discuss the problems\nof gradient vanishing and explosion in long-\nterm dependencies. We explain close-to-identity\nweight matrix, long delays, leaky units, and echo\nstate networks for solving this problem. Then,\nwe introduce LSTM gates and cells, "
-}

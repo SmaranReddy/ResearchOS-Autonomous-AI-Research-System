@@ -1,6 +1,0 @@
-{
-  "title": "Recent Advances in Recurrent Neural Networks",
-  "url": "https://arxiv.org/pdf/1801.01078.pdf",
-  "chars": 121549,
-  "preview": "arXiv:1801.01078v3  [cs.NE]  22 Feb 20181\nRecent Advances in Recurrent Neural Networks\nHojjat Salehinejad, Sharan Sankar, Joseph Barfett, Errol C olak, and Shahrokh Valaee\nAbstract —Recurrent neural networks (RNNs) are capable of\nlearning features and long term dependencies from sequenti al\nand time-series data. The RNNs have a stack of non-linear uni ts\nwhere at least one connection between units forms a directed\ncycle. A well-trained RNN can model any dynamical system;\nhowever, training RNNs is mostly plagued by issues in learni ng\nlong-term dependencies. In this paper, we present a survey o n\nRNNs and several new advances for newcomers and professiona ls\nin the ﬁeld. The fundamentals and recent advances are explai ned\nand the research challenges are introduced.\nIndex Terms —Deep learning, long-term dependency, recurrent\nneural networks, time-series analysis.\nI. I NTRODUCTION\nARTIFICIAL neural networks (ANNs) are made from\nlayers of connected units called artiﬁcial neurons. A\n“shallo"
-}

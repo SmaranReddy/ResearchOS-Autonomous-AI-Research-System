@@ -1,11 +1,32 @@
+import os
+import hashlib
+from collections import OrderedDict
 from pinecone import Pinecone
 from sentence_transformers import SentenceTransformer
-import os
 from typing import List, Dict, Any, Optional
 
 EMBED_MODEL = "all-MiniLM-L6-v2"
+MAX_CACHE_SIZE = 500
+HASH_THRESHOLD = 200
+
 
 class RetrieverAgent:
+    # Class-level OrderedDict — preserves insertion order for FIFO eviction
+    _cache: OrderedDict = OrderedDict()
+
+    def _make_key(self, query: str, top_k: int) -> str:
+        normalized = query.strip().lower()
+        if len(normalized) > HASH_THRESHOLD:
+            normalized = hashlib.md5(normalized.encode()).hexdigest()
+        return f"{normalized}::{top_k}"
+
+    def _insert(self, key: str, value) -> None:
+        RetrieverAgent._cache[key] = value
+        if len(RetrieverAgent._cache) > MAX_CACHE_SIZE:
+            RetrieverAgent._cache.popitem(last=False)  # evict oldest (FIFO)
+        if len(RetrieverAgent._cache) % 50 == 0:
+            print(f"[CACHE] retrieval cache size: {len(RetrieverAgent._cache)}/{MAX_CACHE_SIZE}")
+
     def __init__(self):
         pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
         self.index = pc.Index("re-search")
@@ -19,6 +40,12 @@ class RetrieverAgent:
 
     def retrieve(self, query: str, top_k: int = 5, min_score: float = None, per_paper_cap: int = None):
         """Retrieve top relevant chunks for the query"""
+        cache_key = self._make_key(query, top_k)
+        if cache_key in RetrieverAgent._cache:
+            print(f"[CACHE HIT] retrieval")
+            return RetrieverAgent._cache[cache_key]
+        print(f"[CACHE MISS] retrieval")
+
         query_vector = self.embed_query(query)
 
         response = self.index.query(
@@ -53,4 +80,5 @@ class RetrieverAgent:
             matches = capped
 
         print(f"🔎 Retrieved {len(matches)} matches (requested top_k={top_k}).")
+        self._insert(cache_key, matches)
         return matches

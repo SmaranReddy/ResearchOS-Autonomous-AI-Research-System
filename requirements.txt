@@ -24,3 +24,5 @@ tavily
 nltk
 pinecone
 python-dotenv
+fastapi
+uvicorn

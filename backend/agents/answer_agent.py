@@ -22,12 +22,21 @@ class AnswerAgent:
         self.client = Groq(api_key=api_key)
         print("✅ AnswerAgent ready (Groq LLM).")
 
-    def generate_answer(self, query: str, context) -> str:
+    def generate_answer(self, query: str, context, chat_history: list = []) -> str:
         """
         Combine retrieved chunks into a final answer using Groq.
         Accepts either List[str] or List[Dict] (ranked_docs with 'text' key).
+        chat_history: last N interactions as [{"query": ..., "answer": ...}]
         """
+        # extract unique paper titles for citations before stripping to text
+        citations = []
         if context and isinstance(context[0], dict):
+            seen = set()
+            for doc in context:
+                title = doc.get("metadata", {}).get("title", "")
+                if title and title not in seen:
+                    seen.add(title)
+                    citations.append(title)
             context = [doc.get("text", "") for doc in context]
         context_text = "\n\n".join(context)
         if len(context_text) > 15000:  # keep prompt size manageable
@@ -36,18 +45,34 @@ class AnswerAgent:
         if not context_text.strip():
             return "I don't have enough information to answer this question."
 
-        prompt = f"""You are a research assistant. Answer the question using ONLY the context provided below.
+        # build conversation history block (last 2 turns)
+        history_block = ""
+        if chat_history:
+            turns = chat_history[-2:]
+            lines = []
+            for turn in turns:
+                q = turn.get("query", "")
+                a = turn.get("answer", "")
+                if q:
+                    lines.append(f"Q: {q}")
+                if a:
+                    lines.append(f"A: {a[:300]}...")
+            if lines:
+                history_block = "Conversation History (for intent only — do NOT use as facts):\n" + "\n".join(lines) + "\n\n"
+
+        prompt = f"""You are a research assistant. Answer the question using ONLY the current context provided below.
 Do NOT use any outside knowledge. Do NOT hallucinate or infer beyond what is stated.
+The conversation history is provided only to understand the user's intent — do NOT treat it as factual source.
 
 If the context does not contain enough information to answer, respond with exactly:
 "I don't have enough information to answer this question."
 
 ---
-CONTEXT:
+{history_block}Current Context:
 {context_text}
 ---
 
-QUESTION: {query}
+Current Question: {query}
 
 Respond in this structure:
 **Explanation:** (2-4 sentences directly answering the question from the context)
@@ -69,7 +94,11 @@ Respond in this structure:
                 max_tokens=1000,
             )
 
-            return response.choices[0].message.content.strip()
+            answer = response.choices[0].message.content.strip()
+            if citations:
+                citation_block = "\n\n**Sources:**\n" + "\n".join(f"- {t}" for t in citations)
+                answer += citation_block
+            return answer
 
         except Exception as e:
             print(f"⚠️ AnswerAgent failed ({e})")

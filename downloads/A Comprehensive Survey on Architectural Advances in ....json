@@ -1,6 +1,0 @@
-{
-  "title": "A Comprehensive Survey on Architectural Advances in ...",
-  "url": "https://arxiv.org/pdf/2503.16546.pdf",
-  "chars": 256174,
-  "preview": "A Comprehensive Survey on Architectural Advances  in Deep CNNs: Challenges, Applications, and \nEmerging Research Directions  \nSaddam Hussain Khan1*, Rashid Iqbal1 \n1Artificial Intelligence Lab, Department of Computer Systems Engineering, University of Engineering and Applied \nSciences (UEAS), Swat 19060, Pakistan  \nEmail : saddamhkhan@ueas.edu.pk   \n \nAbstract  \nDeep Convolutional Neural Networks (CNNs) have significantly advanced deep learning, driving \nbreakthroughs in computer vision, natural language processing, medical diagnosis , object detection, and \nspeech recognition. Architectural innovations  including 1D, 2D, and 3D convolutional models, dilated and \ngrouped convolutions, depthwise separable convolutions, and attention mechanisms  address domain -specific \nchallenges and enhance feature representation and computational efficiency. Advancements in activation \nfunctions, optimization methods, and regularization techniques, supported by large -scale datasets and high -\nperfor"
-}

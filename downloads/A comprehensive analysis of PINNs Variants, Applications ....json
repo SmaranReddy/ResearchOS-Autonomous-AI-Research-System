@@ -1,6 +1,0 @@
-{
-  "title": "A comprehensive analysis of PINNs: Variants, Applications ...",
-  "url": "https://arxiv.org/pdf/2505.22761.pdf",
-  "chars": 121938,
-  "preview": "arXiv:2505.22761v1  [cs.CE]  28 May 2025ACOMPREHENSIVE ANALYSIS OF PINN S: VARIANTS ,\nAPPLICATIONS ,AND CHALLENGES\nAfila Ajithkumar Sophiya\nLincoln AI Lab\nSchool of Engineering and Physical Science\nUniversity of Lincoln\nLincoln, United Kingdom\n29511866@students.lincoln.ac.ukAkarsh K Nair\nDepartment of Computer Science & Engineering\nIndian Institute of Information Technology Kottayam\nKerala, India\n0000-0002-7734-0367\nSepehr Maleki\nLincoln AI Lab\nSchool of Engineering and Physical Science\nUniversity of Lincoln\nLincoln, United Kingdom\nsmaleki@lincoln.ac.ukSenthil K. Krishnababu\nSiemens Energy\nLincoln, United Kingdom\nsenthil.krishnababu@siemens-energy.com\nJune 11, 2025\nABSTRACT\nPhysics Informed Neural Networks (PINNs) have been emerging as a powerful computational tool\nfor solving differential equations. However, the applicability of these models is still in its initial\nstages and requires more standardization to gain wider popularity. Through this survey, we present a\ncomprehensive overvi"
-}

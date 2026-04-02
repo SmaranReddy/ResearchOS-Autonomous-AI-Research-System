@@ -1,6 +1,0 @@
-{
-  "title": "Recurrent Neural Networks for Long and Short-Term ...",
-  "url": "https://arxiv.org/pdf/1807.09142.pdf",
-  "chars": 36408,
-  "preview": "Recurrent Neural Networks for Long and Short-Term Sequential\nRecommendation\nKiewan Villatel\nCAIL / Université de Lille\nGrenoble\nk.villatel@criteo.comElena Smirnova\nCAIL\nParis\ne.smirnova@criteo.com\nJérémie Mary\nCAIL\nParis\nj.mary@criteo.comPhilippe Preux\nUniversité de Lille\nLille\nphilippe.preux@inria.fr\nABSTRACT\nRecommender systems objectives can be broadly characterized as\nmodeling user preferences over short- or long-term time horizon. A\nlarge body of previous research studied long-term recommendation\nthrough dimensionality reduction techniques applied to the his-\ntorical user-item interactions. A recently introduced session-based\nrecommendation setting highlighted the importance of modeling\nshort-term user preferences. In this task, Recurrent Neural Net-\nworks (RNN) have shown to be successful at capturing the nuances\nof user’s interactions within a short time window. In this paper,\nwe evaluate RNN-based models on both short-term and long-term\nrecommendation tasks. Our experimental re"
-}
