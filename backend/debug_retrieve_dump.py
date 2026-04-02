@@ -1,6 +1,6 @@
 # backend/debug_retrieve_dump.py
 import json
-from agents.retriever_agent import RetrieverAgent
+from retrieval.retriever import RetrieverAgent
 
 def dump(query="Vision Transformers", top_k=50):
     r = RetrieverAgent()

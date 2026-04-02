@@ -4,6 +4,7 @@
 
 import os
 from groq import Groq
+from dotenv import load_dotenv
 
 
 class AnswerAgent:
@@ -21,43 +22,58 @@ class AnswerAgent:
         self.client = Groq(api_key=api_key)
         print("✅ AnswerAgent ready (Groq LLM).")
 
-    def generate_answer(self, query: str, context: list[str]) -> str:
+    def generate_answer(self, query: str, context) -> str:
         """
         Combine retrieved chunks into a final answer using Groq.
+        Accepts either List[str] or List[Dict] (ranked_docs with 'text' key).
         """
+        if context and isinstance(context[0], dict):
+            context = [doc.get("text", "") for doc in context]
         context_text = "\n\n".join(context)
         if len(context_text) > 15000:  # keep prompt size manageable
             context_text = context_text[:15000]
 
-        prompt = f"""
-        You are an expert AI research summarizer.
-        The following are extracted research paper snippets about: "{query}".
+        if not context_text.strip():
+            return "I don't have enough information to answer this question."
 
-        Context:
-        {context_text}
+        prompt = f"""You are a research assistant. Answer the question using ONLY the context provided below.
+Do NOT use any outside knowledge. Do NOT hallucinate or infer beyond what is stated.
 
-        Based on the above, write a concise, factual, and well-structured explanation.
-        - Do NOT hallucinate or fabricate details.
-        - Include paper insights if found.
-        - Write clearly in academic tone.
-        """
+If the context does not contain enough information to answer, respond with exactly:
+"I don't have enough information to answer this question."
+
+---
+CONTEXT:
+{context_text}
+---
+
+QUESTION: {query}
+
+Respond in this structure:
+**Explanation:** (2-4 sentences directly answering the question from the context)
+
+**Key Points:**
+- (bullet point from context)
+- (bullet point from context)
+- (add more as needed)
+"""
 
         try:
             response = self.client.chat.completions.create(
-                model="llama-3.1-8b-instant",   # ✅ UPDATED MODEL
+                model="llama-3.1-8b-instant",
                 messages=[
-                    {"role": "system", "content": "You are a helpful academic AI assistant."},
+                    {"role": "system", "content": "You are a research assistant that answers only from provided context. Never fabricate information."},
                     {"role": "user", "content": prompt},
                 ],
-                temperature=0.2,
+                temperature=0.1,
                 max_tokens=1000,
             )
 
             return response.choices[0].message.content.strip()
 
         except Exception as e:
-            print(f"⚠️ Model {model_name} failed ({e})")
-            return None
+            print(f"⚠️ AnswerAgent failed ({e})")
+            return ""
 
     def generate_overview(self, query, context=None):
         """Academic overview mode."""

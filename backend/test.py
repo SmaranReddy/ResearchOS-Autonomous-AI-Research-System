@@ -1,4 +1,4 @@
-from agents.kgraph_agent import KGraphAgent
+from knowledge_graph.graph_builder import KGraphAgent
 import webbrowser
 
 # Initialize the knowledge graph agent

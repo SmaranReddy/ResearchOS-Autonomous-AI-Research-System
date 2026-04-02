@@ -1,5 +1,5 @@
-# agents/chunking_agent.py
-class ChunkingAgent:
+# agents/chunking.py
+class Chunker:
     """Splits text into overlapping chunks for embedding."""
 
     def __init__(self, chunk_size=1500, overlap=200):

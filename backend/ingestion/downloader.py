@@ -13,7 +13,7 @@ BROWSER_HEADERS = {
     "Connection": "keep-alive",
 }
 
-class DownloaderAgent:
+class Downloader:
     def __init__(self, save_dir="downloads"):
         os.makedirs(save_dir, exist_ok=True)
         self.session = requests.Session()

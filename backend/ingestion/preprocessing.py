@@ -1,7 +1,7 @@
 # agents/preprocessing_agent.py
 import re
 
-class PreprocessingAgent:
+class Preprocessor:
     """Cleans extracted PDF text before tokenization."""
     def preprocess(self, text: str) -> str:
         if not text:

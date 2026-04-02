@@ -1,0 +1,22 @@
+[
+  {
+    "query": "What are transformers in deep learning?",
+    "expected_keywords": ["attention", "neural network", "encoder", "decoder"]
+  },
+  {
+    "query": "How does self-attention work?",
+    "expected_keywords": ["query", "key", "value", "softmax", "attention"]
+  },
+  {
+    "query": "What is BERT?",
+    "expected_keywords": ["bidirectional", "pre-training", "language", "representation"]
+  },
+  {
+    "query": "What are the limitations of transformer models?",
+    "expected_keywords": ["quadratic", "memory", "complexity", "length", "computational"]
+  },
+  {
+    "query": "How are transformers used in computer vision?",
+    "expected_keywords": ["image", "patch", "vision", "classification"]
+  }
+]

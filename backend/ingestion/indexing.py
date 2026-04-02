@@ -5,7 +5,7 @@ import os
 from pinecone import Pinecone, ServerlessSpec
 from dotenv import load_dotenv
 
-class IndexAgent:
+class Indexer:
     def __init__(self, index_name="re-search"):
         load_dotenv()
         api_key = os.getenv("PINECONE_API_KEY")

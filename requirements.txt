@@ -7,12 +7,12 @@ grpcio
 feedparser
 google-api-python-client
 google-genai
+sentence-transformers
 numpy
 scikit-learn
 fitz
 rich
 neo4j
-google-generativeai
 tiktoken
 fitz
 beautifulsoup4

@@ -15,8 +15,8 @@ if ROOT_DIR not in sys.path:
 import time
 import streamlit as st
 
-from backend.pipeline import run_pipeline
-from agents.retriever_agent import RetrieverAgent
+from core.executor import run_pipeline
+from retrieval.retriever import RetrieverAgent
 from agents.answer_agent import AnswerAgent
 from agents.critique_agent import CritiqueAgent
 
