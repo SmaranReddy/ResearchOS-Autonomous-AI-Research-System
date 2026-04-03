@@ -1,5 +1,4 @@
 from core.state import State
-from core.planner import get_plan
 
 from utils.search import TavilyAgent
 from ingestion.downloader import Downloader
@@ -36,6 +35,10 @@ def _step_preprocess(state: State) -> State:
     print("[preprocess] cleaning extracted text")
     preprocessor = Preprocessor()
     for p in state.papers:
+        if p.get("clean_text"):
+            print(f"  [preprocess] skip '{p.get('title', 'unknown')}' — already preprocessed")
+            continue
+        print(f"  [preprocess] processing '{p.get('title', 'unknown')}'")
         p["clean_text"] = preprocessor.preprocess(p.get("full_text", ""))
     return state
 
@@ -44,6 +47,10 @@ def _step_chunk(state: State) -> State:
     print("[chunk] splitting text into chunks")
     chunker = Chunker(chunk_size=1000, overlap=150)
     for p in state.papers:
+        if p.get("chunks"):
+            print(f"  [chunk] skip '{p.get('title', 'unknown')}' — already chunked ({len(p['chunks'])} chunks)")
+            continue
+        print(f"  [chunk] chunking '{p.get('title', 'unknown')}'")
         p["chunks"] = chunker.chunk_text(p.get("clean_text", ""))
     return state
 
@@ -52,6 +59,10 @@ def _step_embed(state: State) -> State:
     print("[embed] embedding chunks")
     embedder = Embedder()
     for p in state.papers:
+        if p.get("embeddings"):
+            print(f"  [embed] skip '{p.get('title', 'unknown')}' — already embedded ({len(p['embeddings'])} vectors)")
+            continue
+        print(f"  [embed] embedding '{p.get('title', 'unknown')}'")
         p["embeddings"] = embedder.embed_chunks(p.get("chunks", []))
     return state
 
@@ -60,7 +71,12 @@ def _step_index(state: State) -> State:
     print("[index] uploading to Pinecone")
     indexer = Indexer()
     for p in state.papers:
+        if p.get("indexed"):
+            print(f"  [index] skip '{p.get('title', 'unknown')}' — already indexed")
+            continue
+        print(f"  [index] indexing '{p.get('title', 'unknown')}'")
         indexer.index_chunks(p["title"], p.get("chunks", []), p.get("embeddings", []))
+        p["indexed"] = True
     return state
 
 

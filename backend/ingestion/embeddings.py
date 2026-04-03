@@ -2,10 +2,8 @@ import os
 import hashlib
 from collections import OrderedDict
 from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
+from utils.model import get_embedding_model, EMBED_MODEL, EMBED_DIM
 
-EMBED_MODEL = "all-MiniLM-L6-v2"
-EMBED_DIM = 384
 MAX_CACHE_SIZE = 1000
 HASH_THRESHOLD = 200  # chars — use md5 key above this length
 
@@ -29,8 +27,7 @@ class Embedder:
 
     def __init__(self):
         load_dotenv()
-        self.model = SentenceTransformer(EMBED_MODEL)
-        print(f"✅ Local embedding model ({EMBED_MODEL}, dim={EMBED_DIM}) initialized")
+        self.model = get_embedding_model()
 
     def embed_text(self, text: str) -> list:
         key = self._make_key(text)

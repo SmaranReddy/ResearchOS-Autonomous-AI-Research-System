@@ -2,10 +2,9 @@ import os
 import hashlib
 from collections import OrderedDict
 from pinecone import Pinecone
-from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any, Optional
+from utils.model import get_embedding_model, EMBED_MODEL
 
-EMBED_MODEL = "all-MiniLM-L6-v2"
 MAX_CACHE_SIZE = 500
 HASH_THRESHOLD = 200
 
@@ -30,10 +29,8 @@ class RetrieverAgent:
     def __init__(self):
         pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
         self.index = pc.Index("re-search")
+        self.model = get_embedding_model()
         print("✅ RetrieverAgent connected to Pinecone index.")
-
-        self.model = SentenceTransformer(EMBED_MODEL)
-        print(f"✅ Local embedding model ({EMBED_MODEL}) initialized for retrieval.")
 
     def embed_query(self, text: str) -> list:
         return self.model.encode(text).tolist()
