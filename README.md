@@ -129,6 +129,30 @@ search_web → download → preprocess → chunk → embed → index → re-retr
 
 ---
 
+## 🧰 Tech Stack
+
+### Programming & Backend
+- Python
+- FastAPI
+
+### LLM & AI
+- Groq (LLaMA 3.1)
+- Sentence Transformers (all-MiniLM-L6-v2)
+
+### Retrieval & Storage
+- Pinecone (vector database)
+
+### Data Acquisition
+- Tavily (web search API)
+- requests (PDF downloading)
+- PyPDF2 (PDF parsing)
+
+### Utilities
+- python-dotenv (environment management)
+- numpy (used by embedding model)
+
+---
+
 ## 🧪 Example Behavior
 
 **Case 1 — Good context, answer generated**
