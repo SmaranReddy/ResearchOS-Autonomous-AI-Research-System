@@ -23,13 +23,14 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     answer: str
+    confidence: float
     history: List[dict]
 
 
 @app.post("/query", response_model=QueryResponse)
 def query(request: QueryRequest):
-    answer, updated_history = run_pipeline(
+    answer, confidence, updated_history = run_pipeline(
         request.query,
         chat_history=request.history or [],
     )
-    return QueryResponse(answer=answer, history=updated_history)
+    return QueryResponse(answer=answer, confidence=confidence, history=updated_history)

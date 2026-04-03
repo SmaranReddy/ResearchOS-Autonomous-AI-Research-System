@@ -34,9 +34,10 @@ class Reranker:
         except Exception:
             return 0.0
 
-    def rerank(self, query: str, docs: List[Dict]) -> List[Dict]:
+    def rerank(self, query: str, docs: List[Dict], top_k: int = 5) -> List[Dict]:
         for doc in docs:
             doc["rerank_score"] = self._score_doc(query, doc.get("text", ""))
         ranked = sorted(docs, key=lambda d: d["rerank_score"], reverse=True)
-        print(f"[Reranker] Reranked {len(ranked)} docs.")
-        return ranked
+        top_k = min(top_k, len(ranked))
+        print(f"[Reranker] Selected top {top_k} out of {len(ranked)} docs.")
+        return ranked[:top_k]

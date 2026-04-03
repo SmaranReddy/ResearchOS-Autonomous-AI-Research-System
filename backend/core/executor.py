@@ -101,16 +101,19 @@ def _step_rerank(state: State) -> State:
 def _step_answer(state: State) -> State:
     print("[answer] generating final answer")
     state.final_answer = AnswerAgent().generate_answer(
-        state.user_query, state.ranked_docs, chat_history=state.chat_history
+        state.user_query, state.ranked_docs, chat_history=state.chat_history, state=state
     )
     return state
 
 
 def _step_critique(state: State) -> State:
-    print("[CRITIQUE] refining answer")
-    context = [doc.get("text", "") for doc in state.ranked_docs if isinstance(doc, dict)]
-    state.final_answer = CritiqueAgent().critique(state.final_answer, context, query=state.user_query)
-    # append refined answer to history and keep only last 3
+    if state.is_fallback:
+        print("[CRITIQUE] skipped — fallback response")
+    else:
+        print("[CRITIQUE] refining answer")
+        context = [doc.get("text", "") for doc in state.ranked_docs if isinstance(doc, dict)]
+        state.final_answer = CritiqueAgent().critique(state.final_answer, context, query=state.user_query)
+    # append to history and keep only last 3
     state.chat_history.append({"query": state.user_query, "answer": state.final_answer})
     state.chat_history = state.chat_history[-3:]
     return state
@@ -136,22 +139,50 @@ STEP_REGISTRY = {
 
 
 # ---------------------------------------------------------------------------
-# Retrieval quality check
+# Retrieval quality checks
 # ---------------------------------------------------------------------------
 
 MIN_DOCS = 3
 MIN_AVG_SCORE = 0.3
+MIN_RERANK_SCORE = 4.0   # rerank scores are 0–10 (LLM-rated)
 
 INGESTION_STEPS = ["search_web", "download", "preprocess", "chunk", "embed", "index"]
 
 
 def _is_retrieval_weak(docs: list) -> bool:
+    """Fast pre-rerank guard: triggers on very low doc count or poor raw scores."""
     if len(docs) < MIN_DOCS:
         return True
     scores = [d.get("score") for d in docs if d.get("score") is not None]
     if scores and (sum(scores) / len(scores)) < MIN_AVG_SCORE:
         return True
     return False
+
+
+def _is_relevance_low(ranked_docs: list) -> bool:
+    """
+    Post-rerank relevance guard.
+    Triggers ingestion when the median score is low OR the majority of
+    docs are weak — robust to overall weak retrieval without depending
+    on single outliers.
+    """
+    scores = [d.get("rerank_score", 0.0) for d in ranked_docs if isinstance(d, dict)]
+    if not scores:
+        print("[INGESTION CHECK] no rerank scores available — treating as low relevance")
+        return True
+
+    sorted_scores = sorted(scores, reverse=True)
+    total_docs = len(sorted_scores)
+    median_score = sorted_scores[total_docs // 2]
+    low_quality_count = sum(1 for s in scores if s < MIN_RERANK_SCORE)
+
+    print(f"[INGESTION CHECK] scores: {[round(s, 1) for s in sorted_scores]}")
+    print(f"[INGESTION CHECK] median: {median_score:.1f}")
+    print(f"[INGESTION CHECK] low-quality docs (<{MIN_RERANK_SCORE}): {low_quality_count}/{total_docs}")
+
+    relevance_low = median_score < MIN_RERANK_SCORE or low_quality_count >= total_docs // 2
+    print(f"[INGESTION CHECK] decision: {'LOW' if relevance_low else 'SUFFICIENT'}")
+    return relevance_low
 
 
 def _run_step(state: State, step: str) -> State:
@@ -187,20 +218,49 @@ def run_pipeline(query: str, num_papers: int = 5, chat_history: list = None) -> 
     state = _run_step(state, "query_transform")
     state = _run_step(state, "retrieve")
 
-    # --- Phase 2: evaluate retrieval quality ---
+    # --- Phase 2a: fast count guard (before rerank) ---
     print(f"[INGESTION CHECK] docs found: {len(state.raw_docs)}")
     if _is_retrieval_weak(state.raw_docs):
-        print(f"[INGESTION TRIGGERED] due to low retrieval ({len(state.raw_docs)} docs)")
+        print(f"[INGESTION TRIGGERED] too few / low-scoring raw docs ({len(state.raw_docs)}) → ingesting")
         for step in INGESTION_STEPS:
             state = _run_step(state, step)
-        # re-retrieve with freshly indexed content
         state = _run_step(state, "retrieve")
-    else:
-        print(f"[INGESTION SKIPPED] sufficient docs found ({len(state.raw_docs)})")
+        state.ingestion_done = True
+        print(f"[INGESTION CHECK] re-retrieved {len(state.raw_docs)} docs after ingestion")
 
-    # --- Phase 3: rerank + answer + critique ---
+    # --- Phase 2b: rerank, then check relevance quality ---
     state = _run_step(state, "rerank")
+
+    if _is_relevance_low(state.ranked_docs):
+        print("[INGESTION CHECK] relevance low → triggering ingestion")
+        for step in INGESTION_STEPS:
+            state = _run_step(state, step)
+        state = _run_step(state, "retrieve")
+        state = _run_step(state, "rerank")
+        state.ingestion_done = True
+        print("[INGESTION CHECK] relevance sufficient → continuing after re-ingestion")
+    else:
+        print("[INGESTION CHECK] relevance sufficient → skipping ingestion")
+
+    # --- Phase 2c: confidence pre-check (max 1 retry) ---
+    if not state.ingestion_done:
+        context_text = "\n\n".join(
+            doc.get("text", "") for doc in state.ranked_docs if isinstance(doc, dict)
+        )
+        agent = AnswerAgent()
+        confidence = agent.get_context_confidence(state.user_query, context_text)
+        state.confidence = confidence
+        print(f"[ANSWER CHECK] confidence: {confidence:.2f}")
+        if confidence < agent.CONFIDENCE_THRESHOLD:
+            print("[INGESTION CHECK] context insufficient → triggering ingestion (retry)")
+            for step in INGESTION_STEPS:
+                state = _run_step(state, step)
+            state = _run_step(state, "retrieve")
+            state = _run_step(state, "rerank")
+            state.ingestion_done = True
+
+    # --- Phase 3: answer + critique ---
     state = _run_step(state, "answer")
     state = _run_step(state, "critique")
 
-    return state.final_answer, state.chat_history
+    return state.final_answer, state.confidence, state.chat_history

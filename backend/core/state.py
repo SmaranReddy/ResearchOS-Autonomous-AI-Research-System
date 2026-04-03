@@ -19,6 +19,11 @@ class State:
         self.raw_docs: List[Dict] = []
         self.ranked_docs: List[Dict] = []
 
+        # --- ingestion tracking ---
+        self.ingestion_done: bool = False   # True once ingestion has run (caps retries at 1)
+        self.is_fallback: bool = False      # True when answer is a low-confidence fallback
+
         # --- answer ---
         self.final_answer: str = ""
+        self.confidence: float = 0.0        # context confidence score from AnswerAgent
         self.chat_history: List[Dict] = []  # [{"query": ..., "answer": ...}]
