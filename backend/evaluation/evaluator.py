@@ -34,7 +34,7 @@ def evaluate():
         expected = [kw.lower() for kw in case["expected_keywords"]]
 
         print(f"\n[{i}/{len(test_cases)}] Query: {query}")
-        answer, _ = run_pipeline(query)
+        answer, *_ = run_pipeline(query)
 
         # --- Baseline: keyword score ---
         answer_lower = answer.lower()

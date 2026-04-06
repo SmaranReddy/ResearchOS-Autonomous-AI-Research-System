@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background-color: #0f1117;
+  color: #e2e8f0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #1e2130; }
+::-webkit-scrollbar-thumb { background: #2d3148; border-radius: 3px; }
+
+/* Typing dots animation */
+@keyframes blink {
+  0%, 80%, 100% { opacity: 0; }
+  40% { opacity: 1; }
+}
+.typing-dot:nth-child(1) { animation: blink 1.4s infinite 0s; }
+.typing-dot:nth-child(2) { animation: blink 1.4s infinite 0.2s; }
+.typing-dot:nth-child(3) { animation: blink 1.4s infinite 0.4s; }

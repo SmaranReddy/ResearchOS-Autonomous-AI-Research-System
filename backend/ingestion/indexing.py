@@ -33,7 +33,7 @@ class Indexer:
     # ------------------------------------------
     # BATCH INDEX — FIXED
     # ------------------------------------------
-    def index_chunks(self, title: str, chunks: list[str], embeddings: list[list[float]]):
+    def index_chunks(self, title: str, chunks: list[str], embeddings: list[list[float]], url: str = ""):
         if not chunks or not embeddings:
             print(f"⚠️ No chunks/embeddings to index for '{title}'.")
             return
@@ -43,7 +43,8 @@ class Indexer:
             meta = {
                 "title": title,
                 "chunk_id": i,
-                "text": chunk,  # ❗ FIX — store full text
+                "text": chunk,
+                "url": url,   # paper source URL stored for citation retrieval
             }
             vectors.append({
                 "id": f"{title}_{i}",

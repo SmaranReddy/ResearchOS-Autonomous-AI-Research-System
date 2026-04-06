@@ -26,4 +26,33 @@ class State:
         # --- answer ---
         self.final_answer: str = ""
         self.confidence: float = 0.0        # context confidence score from AnswerAgent
+        self.confidence_cached: bool = False # True when Phase 2c already computed confidence
         self.chat_history: List[Dict] = []  # [{"query": ..., "answer": ...}]
+
+        # --- structured output ---
+        self.sources: List[Dict] = []       # [{"title": str, "url": str}]
+        self.latency_ms: Dict[str, int] = {
+            "retrieve_ms": 0,
+            "rerank_ms": 0,
+            "llm_ms": 0,
+        }
+        self.status: str = "success"        # "success" | "low_confidence" | "fallback" | "error"
+
+        # --- decision trace ---
+        # Populated progressively during the pipeline; exposed in the API response.
+        self.decision_trace: Dict[str, str] = {
+            "retrieval_quality":    "",   # filled after rerank
+            "action":               "",   # filled at ingestion/fallback decision points
+            "confidence_reasoning": "",   # filled after compute_composite
+        }
+
+        # Internal signal — NOT exposed in the API response.
+        # Strength of the last ingestion decision: "strong" | "moderate" | "weak".
+        # Reserved for future reasoning loops (e.g. adaptive retry budgets).
+        self._decision_strength: str = ""
+
+        # Self-critique scoring — NOT exposed in the API response.
+        self._critique_score:  float = 0.0   # score ∈ [0,1] from critique_answer()
+        self._critique_reason: str   = ""    # one-sentence explanation
+        self._critique_type:   str   = ""    # "incomplete"|"incorrect"|"not_grounded"|"good"
+        self._retried:         bool  = False  # True after one retry attempt

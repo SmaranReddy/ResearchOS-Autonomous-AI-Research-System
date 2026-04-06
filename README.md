@@ -1,296 +1,550 @@
-# ReSearch — A Confidence-Aware, Self-Correcting RAG System
+# ReSearch
 
-> *A retrieval system that knows when it doesn't know — using confidence gating and adaptive ingestion.*
-
----
-
-## 🧠 Key Innovations
-
-**Dynamic document acquisition**
-Automatically searches, downloads, and indexes research papers when retrieval quality is insufficient — turning a failed retrieval pass into a self-healing ingestion cycle without manual intervention.
-
-**Relevance-aware ingestion trigger**
-Ingestion is not triggered by counting documents. It fires when LLM-rated retrieval quality falls below a threshold — measured using median rerank score and the proportion of low-quality documents. A count-based trigger misses the harder case: many retrieved documents that are entirely off-topic.
-
-**LLM-rated reranking as a quality signal**
-The reranker scores each document 0–10 via an LLM cross-encoder prompt. These scores feed both top-k selection and the relevance guard — reusing a single LLM pass for two purposes.
-
-**Confidence-scored answering**
-Before generating an answer, the system asks the LLM to rate context sufficiency on a 0–1 scale. Below 0.5, no answer is generated. This catches cases where rerank scores looked acceptable but the context still cannot address the specific query.
-
-**Controlled retry with a hard cap**
-Ingestion fires at most once per query via a `state.ingestion_done` flag. This prevents runaway retries while still handling cold-start indexes.
-
-**Critique bypass for fallbacks**
-When `state.is_fallback` is True, the critique agent is skipped entirely — preventing the critique LLM from reformatting a one-line refusal into a structured block with fake sections.
-
-**Multi-query retrieval with HyDE**
-Each query generates five search variants: the original, a HyDE (Hypothetical Document Embedding) passage, and three angle-shifted expansions. Results are deduplicated before reranking.
+An adaptive Retrieval-Augmented Generation (RAG) system that answers research questions by dynamically deciding whether to ingest new papers from the web or answer from an existing Pinecone index. The system applies multi-signal confidence scoring, self-critique, and type-aware retry to maximize answer quality.
 
 ---
 
-## 🚀 Overview
+## Table of Contents
 
-Most RAG systems retrieve documents, stuff them into a prompt, and hope the LLM does the right thing. ReSearch takes a different approach:
-
-- Retrieval quality is **measured**, not assumed
-- Ingestion is **adaptive** — triggered by relevance, not document count
-- Answers are **gated** by a confidence score before generation
-- Critique is **conditional** — fallback responses bypass reformatting entirely
-
-The result is a system that either returns a well-grounded, refined answer — or explicitly refuses to answer. It minimizes hallucination via strict context grounding and fallback gating, rather than relying solely on prompt instructions.
-
----
-
-## 🎯 Why This Matters
-
-| | Traditional RAG | ReSearch |
-|---|---|---|
-| Retrieval | Retrieves blindly, assumes relevance | Measures relevance via LLM rerank scores |
-| Ingestion | Static, pre-indexed only | Adaptive — triggers on low retrieval quality |
-| Answer quality | Generates regardless of context quality | Confidence-gated — refuses if context is weak |
-| Failure mode | Hallucination or incorrect answers | Explicit fallback: "insufficient information" |
-| Post-processing | None or generic | Conditional critique with scope enforcement |
+1. [Project Overview](#1-project-overview)
+2. [Key Features](#2-key-features)
+3. [System Architecture](#3-system-architecture)
+4. [Backend Details](#4-backend-details)
+5. [Frontend (Next.js)](#5-frontend-nextjs)
+6. [Decision Intelligence](#6-decision-intelligence)
+7. [Self-Correction System](#7-self-correction-system)
+8. [API Contract](#8-api-contract)
+9. [How to Run](#9-how-to-run)
+10. [Example Flow](#10-example-flow)
+11. [Limitations](#11-limitations)
 
 ---
 
-## 🏗️ Architecture
+## 1. Project Overview
 
-📌 *(Optional: Add architecture diagram here for better visualization)*
+ReSearch is a full-stack research assistant. Given a natural-language query, it:
 
-```
-Query
-  │
-  ▼
-QueryTransformer          — HyDE + 3 query expansions (5 variants total)
-  │
-  ▼
-RetrieverAgent            — Pinecone vector search across all variants, dedup
-  │
-  ▼
-[Count Guard]             — if raw docs < 3 or avg score < 0.3 → ingest
-  │
-  ▼
-Reranker                  — LLM scores each doc 0–10, returns top-k
-  │
-  ▼
-[Relevance Guard]         — median < 4.0 OR majority low-quality → ingest
-  │
-  ▼
-[Confidence Pre-check]    — if not yet ingested and confidence < 0.5 → ingest
-  │
-  ▼
-AnswerAgent               — confidence gate → generate structured answer
-  │
-  ▼
-CritiqueAgent             — scope enforcement + deduplication (skipped for fallbacks)
-  │
-  ▼
-Final Answer + Confidence Score
-```
+1. Probes an existing Pinecone vector index for relevant chunks.
+2. Evaluates retrieval quality using multiple signals (doc count, cosine similarity, LLM-based rerank scores, and LLM context sufficiency).
+3. If the existing index is insufficient, searches the web via Tavily, downloads and parses PDFs, chunks and embeds the text, and indexes it into Pinecone — all at query time.
+4. Generates a grounded answer using Groq's LLM, then scores and optionally refines it with a self-critique pass.
+5. Returns a composite confidence score, a decision trace, source citations, and per-stage latency alongside the answer.
 
-The **Executor** drives this pipeline via a step registry — each step is a pure function `(State) → State`. The **Planner** defines step ordering. State is a single dataclass passed through every step.
+A Next.js frontend streams tokens in real time and surfaces confidence, source chips, quality warnings, a retry badge, and a toggleable debug panel.
 
 ---
 
-## 🔄 Pipeline Flow
+## 2. Key Features
 
-1. **Query Transform** — Generate 5 query variants (original + HyDE + 3 expansions)
-2. **Retrieve** — Query Pinecone with all variants, merge and deduplicate results
-3. **Count Guard** — Check raw doc count and cosine score average; ingest if weak
-4. **Rerank** — LLM scores all retrieved docs, keeps top-k (default: 5)
-5. **Relevance Guard** — Compute median rerank score and low-quality doc ratio; ingest if poor
-6. **Confidence Pre-check** — LLM rates context sufficiency (0–1); ingest if < 0.5 and not yet ingested
-7. **Answer** — Confidence gate: if < 0.5 → return fallback; else generate structured answer
-8. **Critique** — Remove off-topic entities, deduplicate content, enforce query scope; skipped for fallbacks
-9. **Return** — `{ answer, confidence, history }`
+### Retrieval + Reranking
+- Multi-query retrieval: each user query is expanded into up to 5 variants — the original (or follow-up-resolved) query, a HyDE (Hypothetical Document Embedding) passage, and 3 alternative phrasings generated by the LLM.
+- All variants are sent to Pinecone and results are deduplicated by document ID.
+- A Groq LLM-based reranker (cross-encoder style, score 0–10) re-scores every retrieved chunk before selection.
+- In-process FIFO embedding cache (up to 1,000 entries) and retrieval cache (up to 500 entries) reduce redundant API calls.
 
-**Ingestion sub-pipeline** (triggered by any guard):
-```
-search_web → download → preprocess → chunk → embed → index → re-retrieve
-```
+### Adaptive Ingestion Decision System
+- Three ingestion check phases run before and after reranking, each using progressively more signals.
+- A 5-rule policy (`should_trigger_ingestion`) decides whether to fetch new papers. Rules cover: entity coverage gaps, insufficient document count, weak retrieval similarity, high rerank variance, and LLM uncertainty.
+- Each decision is tagged with a strength (`strong`, `moderate`, `weak`) that downstream components use for retry budgeting.
+- If ingestion is triggered, the full pipeline (web search → PDF download → preprocessing → chunking → embedding → Pinecone upsert) runs inline and retrieval is repeated.
 
----
+### Composite Confidence Scoring
+- Three signals are combined: Pinecone cosine similarity (retrieval), top-3 LLM rerank scores (0–10 normalised to 0–1), and an LLM context-sufficiency score (0–1).
+- Default weights: retrieval 0.25, rerank 0.35, LLM 0.40.
+- Adaptive weight adjustment: weights shift based on doc count, rerank score spread, and LLM uncertainty — without extra API calls.
 
-## ⚙️ Features
+### Decision Trace
+- Every response includes `retrieval_quality`, `action`, and `confidence_reasoning` fields, all generated from signals already computed in the pipeline (no extra LLM calls).
+- `action` values: `used_existing_knowledge`, `used_existing_knowledge_borderline`, `triggered_ingestion_low_docs`, `triggered_ingestion_low_relevance`, `triggered_ingestion_low_confidence`, `fallback_no_answer`.
 
-- **Multi-query retrieval** — HyDE + query expansion for broader semantic coverage per query
-- **LLM reranker** — Cross-encoder-style 0–10 scoring per document, not cosine similarity alone
-- **Three-layer quality gate** — count guard → relevance guard → confidence pre-check
-- **Confidence scoring** — 0–1 float returned alongside every answer via the API
-- **Controlled ingestion retry** — Hard cap of 1 ingestion per query via `state.ingestion_done`
-- **Fallback safety** — Answers below confidence threshold never reach the LLM generation step
-- **Critique agent** — General-purpose post-processing: entity-scope filtering, redundancy removal, citation preservation
-- **Critique bypass** — `state.is_fallback` flag prevents critique from reformatting refusals
-- **Deterministic post-filter** — Regex-based sentence filter removes off-topic entities after LLM critique
-- **Caching** — Embedding and retrieval results cached to avoid redundant API calls
-- **Strict grounding** — Answer prompt forbids outside knowledge; history block explicitly marked non-factual
-- **Modular step registry** — Each pipeline step is independently testable and replaceable
+### Self-Critique + Type-Aware Retry
+- After answer generation, a separate `critique_answer` call (small model, max 100 tokens) scores the answer on correctness, completeness, and grounding, and classifies it as `incomplete`, `incorrect`, `not_grounded`, or `good`.
+- Retry is triggered only when `decision_strength == "weak"` AND `critique_score < 0.6` AND no retry has occurred yet.
+- The retry is accepted only if the re-scored answer improves by at least 0.05; otherwise the original answer is restored.
+- Three distinct retrieval strategies are applied depending on critique type (see Section 7).
 
----
+### Short-Term Conversational Memory
+- The last 3 query/answer pairs are maintained in `chat_history` and passed back to the client on every response.
+- Follow-up queries are rewritten into self-contained questions before retrieval to avoid pronoun/reference resolution errors.
+- Chat history is used in the answer prompt only to resolve references — not as a factual source.
 
-## 🧰 Tech Stack
+### Response Cache
+- In-memory LRU cache keyed by SHA-256(normalised query + history JSON + index version).
+- TTL: 10 minutes (configurable via `CACHE_TTL_SECONDS`). Size: 100 entries (configurable via `CACHE_MAX_ENTRIES`).
+- Cache is automatically invalidated after any ingestion by incrementing a process-level `index_version` counter.
+- Only `success` responses are cached; `fallback`, `low_confidence`, and `error` responses are never stored.
 
-### Programming & Backend
-- Python
-- FastAPI
+### Rate Limiting
+- Per-IP sliding-window rate limiter, default 20 requests per 60 seconds (configurable via `RATE_LIMIT_RPM` and `RATE_LIMIT_WINDOW`).
+- Raises HTTP 429 with a `Retry-After` value when the limit is exceeded.
 
-### LLM & AI
-- Groq (LLaMA 3.1)
-- Sentence Transformers (all-MiniLM-L6-v2)
+### Structured Request Logging
+- Every request appended as a JSON line to `backend/logs/requests.jsonl`.
+- Fields: `timestamp` (ISO-8601 UTC), `query`, `status`, `confidence`, `latency` (retrieve/rerank/llm ms), `sources_count`, `cached`, `error`.
 
-### Retrieval & Storage
-- Pinecone (vector database)
-
-### Data Acquisition
-- Tavily (web search API)
-- requests (PDF downloading)
-- PyPDF2 (PDF parsing)
-
-### Utilities
-- python-dotenv (environment management)
-- numpy (used by embedding model)
+### Evaluation Framework
+- Offline evaluation script (`backend/evaluation/evaluator.py`) runs a set of test queries from `test_queries.json`.
+- Two scoring dimensions per query: keyword hit rate (expected keywords present in answer) and LLM scores for relevance and correctness (both 1–10, via `LLMEvaluator`).
 
 ---
 
-## 🧪 Example Behavior
+## 3. System Architecture
 
-**Case 1 — Good context, answer generated**
 ```
-Query:      "Compare transformers with RNNs for sequence modeling"
-Rerank:     [8.5, 7.9, 7.2, 6.8, 6.1]  median=7.2  → sufficient
-Confidence: 0.84  → answer generated
-Critique:   removes any CNN content, deduplicates bullet points
-Output:     structured answer with sources
-```
-
-**Case 2 — Weak initial index, ingestion succeeds**
-```
-Query:      "Explain diffusion models for protein structure prediction"
-Rerank:     [3.1, 2.8, 2.4, 1.9, 1.2]  median=2.4  → low
-            → ingestion triggered (search + download + embed + index)
-Rerank:     [8.1, 7.4, 6.9, 6.3, 5.8]  median=6.9  → sufficient
-Confidence: 0.79  → answer generated
-```
-
-**Case 3 — Ingestion does not help, fallback returned**
-```
-Query:      "What is the thermodynamic entropy of black holes in LQG?"
-            → ingestion triggered → re-retrieved docs still off-topic
-Confidence: 0.31  → below threshold
-Output:     "The available sources do not contain sufficient information
-             to answer this question reliably."
-Critique:   skipped  (state.is_fallback = True)
+User Query
+    │
+    ▼
+QueryTransformer
+  ├── Resolve follow-up with chat history
+  ├── HyDE rewrite (1 LLM call)
+  └── 3 query variations (1 LLM call)
+          │
+          ▼
+RetrieverAgent  ←── Pinecone (cosine similarity, top_k=5 per variant)
+  └── Deduplication by doc ID
+          │
+          ▼
+[Ingestion Check Phase 2a]  ─── should_trigger_ingestion (doc count + retrieval norm only)
+  │  if triggered:
+  │    TavilyAgent → Downloader → Preprocessor → Chunker → Embedder → Indexer → Retrieve again
+          │
+          ▼
+Reranker (LLM, 0–10 per doc, top_k=5)
+          │
+          ▼
+[Ingestion Check Phase 2b]  ─── should_trigger_ingestion (retrieval + rerank signals)
+  │  if triggered: re-ingest + re-retrieve + re-rerank
+          │
+          ▼
+[Ingestion Check Phase 2c — sync path only]
+  │  get_context_confidence (1 LLM call, 10 tokens)
+  │  should_trigger_ingestion (all signals incl. LLM score)
+  │  if triggered: re-ingest + re-retrieve + re-rerank
+  │  if not triggered: cache confidence result
+          │
+          ▼
+AnswerAgent.generate_answer
+  └── Confidence gate: if score < 0.5 → fallback response
+  └── _build_prompt (query + context + last 2 history turns)
+  └── LLM (primary: llama-3.1-8b-instant; fallback: llama3-70b-8192, 2 retries)
+          │
+          ▼
+critique_answer  ─── score ∈ [0,1] + type (1 LLM call, 100 tokens) — sync path only
+          │
+[Conditional Retry — sync path only]
+  └── Trigger: decision_strength=="weak" AND score<0.6 AND not already retried
+  └── _retry_with_expanded_context (type-aware retrieval strategy)
+  └── Re-score; accept only if improvement ≥ 0.05, else revert
+          │
+          ▼
+CritiqueAgent.critique  ─── refine answer text (query scope enforcement, dedup) — sync path only
+          │
+          ▼
+compute_composite  ─── weighted combination of retrieval + rerank + LLM signals
+derive_status      ─── "success" | "low_confidence" | "fallback"
+          │
+          ▼
+API Response
+  └── answer, confidence, status, sources, latency, decision_trace
 ```
 
 ---
 
-## 🎥 Demo
+## 4. Backend Details
 
-> 📌 *[Demo link / video placeholder — add after deployment]*
+### FastAPI Application (`backend/api/app.py`)
 
-The frontend (`frontend/index.html`) provides:
+**Endpoints:**
 
-- A query input with Enter-key support
-- A confidence bar (red < 0.4 / orange 0.4–0.7 / green > 0.7) that animates on each response
-- The full structured answer rendered below
-- Explicit display of fallback messages when context is insufficient
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/query` | Synchronous. Checks cache, runs full pipeline, writes cache on success. Returns `QueryResponse`. |
+| `POST` | `/stream` | Async SSE. Runs retrieval phases in a thread pool, then streams answer tokens. Emits `token`, `done`, and `error` event types. |
 
-No build step required — open the HTML file directly while the backend is running.
+**Middleware:** CORS with configurable `ALLOWED_ORIGINS` (default `http://localhost:3000`). Both endpoints apply `Depends(rate_limit)`.
 
 ---
 
-## 📦 Installation & Setup
+### Core Modules
 
-**Requirements**: Python 3.10+, Pinecone account, Groq API key, Tavily API key
+| Module | Responsibility |
+|--------|---------------|
+| `core/executor.py` | Orchestrates the full pipeline. Contains `run_pipeline` (sync) and `run_pipeline_to_context` (shared retrieval phases used by both sync and stream paths). Implements all three ingestion check phases and the type-aware retry helper `_retry_with_expanded_context`. |
+| `core/state.py` | `State` dataclass holding all intermediate and final pipeline values. Internal fields (`_critique_score`, `_critique_type`, `_retried`, `_decision_strength`) are not exposed in the API response. |
+| `core/decision.py` | `should_trigger_ingestion()`: 5-rule ordered policy returning `(should_ingest: bool, reason: str, strength: str)`. Handles missing signals gracefully — rules requiring unavailable signals are skipped automatically. |
+| `core/confidence.py` | `compute_composite()`: adaptive weighted combination of three signals. `derive_status()`: maps composite score and fallback flag to a status string. Also generates `retrieval_quality` and `confidence_reasoning` trace strings. |
+| `core/critique.py` | `critique_answer()`: one Groq call that scores an answer and returns `(score, reason, critique_type)`. Uses `llama-3.1-8b-instant`, max 100 tokens, temperature 0.0. Fails open (returns 0.5 / `good`) on error. |
+| `core/cache.py` | `ResponseCache`: LRU + TTL in-memory cache. Key includes `index_version` for automatic post-ingestion invalidation. |
+| `core/rate_limiter.py` | `InMemoryRateLimiter`: per-IP sliding-window log. Abstract base class allows swapping in a Redis backend without changing call sites. |
+| `core/logger.py` | `log_request()`: appends one JSON line per request to `backend/logs/requests.jsonl`. Never raises. |
+| `core/planner.py` | `get_plan()`: returns the static ordered step list (informational reference). |
 
-```bash
-git clone <repo-url>
-cd re-search
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS/Linux
-pip install -r requirements.txt
+---
+
+### Agents
+
+| Agent | Responsibility |
+|-------|---------------|
+| `agents/answer_agent.py` | `AnswerAgent`: LLM-based answer generation with a confidence gate. `_call_with_retry()` tries the primary model (`llama-3.1-8b-instant`) twice then falls back to `llama3-70b-8192`. `stream_answer()` is the async streaming variant used by `/stream`. `get_context_confidence()` returns a 0–1 float for context sufficiency. |
+| `agents/critique_agent.py` | `CritiqueAgent`: refines answer text — enforces query scope, removes redundancy, preserves the Sources section. Includes a deterministic post-filter (`_post_filter`) that removes lines whose named entities don't overlap with query entities. |
+
+---
+
+### Ingestion Pipeline
+
+| Module | Responsibility |
+|--------|---------------|
+| `ingestion/downloader.py` | `Downloader`: downloads PDFs via `requests.Session`, with URL rewrite fixups for arXiv, Springer, IEEE, and ACM. Up to 3 retry attempts per URL. Saves PDF and metadata JSON to `backend/downloads/`. |
+| `ingestion/preprocessing.py` | `Preprocessor`: collapses excess newlines, truncates at the first "References" heading, strips figure/table labels, collapses whitespace. |
+| `ingestion/chunking.py` | `Chunker`: sliding-window character chunking. Configured at pipeline entry as size=1000, overlap=150. |
+| `ingestion/embeddings.py` | `Embedder`: wraps `sentence-transformers` model (dimension=768). Class-level FIFO cache up to 1,000 vectors. Batch-encodes cache misses. |
+| `ingestion/indexing.py` | `Indexer`: upserts chunks to Pinecone index `re-search` (dimension=768, cosine, AWS us-east-1 serverless). Stores `title`, `chunk_id`, `text`, and `url` in chunk metadata. |
+
+---
+
+### Retrieval Pipeline
+
+| Module | Responsibility |
+|--------|---------------|
+| `retrieval/query_transform.py` | `QueryTransformer`: generates 5 query variants. `_resolve_with_history()` rewrites follow-up queries into self-contained questions. `_hyde()` generates a hypothetical document passage. `_expand()` produces 3 angle-shifted variants. |
+| `retrieval/retriever.py` | `RetrieverAgent`: embeds query, queries Pinecone with `include_metadata=True`, returns matches with score and metadata. Class-level FIFO retrieval cache up to 500 entries. Supports `min_score` and `per_paper_cap` filters. |
+| `retrieval/reranker.py` | `Reranker`: scores each doc 0–10 with one Groq call per document (temperature=0.0, max_tokens=5), sorts descending, returns top-k. |
+
+---
+
+### Embedding Model
+`sentence-transformers` model loaded via `utils/model.py` (dimension=768, `EMBED_MODEL` constant). Shared as a module-level singleton across `Embedder` and `RetrieverAgent`.
+
+### Web Search
+`utils/search.py` wraps Tavily API. Called only during the ingestion phase to find paper URLs based on the user query.
+
+---
+
+## 5. Frontend (Next.js)
+
+**Stack:** Next.js 14, React 18, TypeScript, Tailwind CSS, `react-markdown` with `remark-gfm`.
+
+### Chat UI (`app/page.tsx`)
+- Single-page chat interface. Empty state shows four example queries as clickable suggestion chips that populate the input.
+- Connects to `/api/stream` (a Next.js route handler that proxies to the FastAPI `/stream` endpoint).
+- Streams SSE tokens token-by-token using the browser `ReadableStream` API. Client-side timeout is 150 seconds.
+- Maintains `history` (up to last 3 turns) in React state; sends it with every request for conversational continuity.
+- "Clear chat" button resets messages and history.
+
+---
+
+### ChatMessage Component (`components/ChatMessage.tsx`)
+
+**User messages:** right-aligned indigo bubble.
+
+**Assistant messages during streaming:**
+- "Searching papers..." loading indicator (three animated dots) while waiting for the first token.
+- Answer text rendered incrementally via `react-markdown` (GFM mode) as tokens arrive.
+- Blinking cursor while streaming.
+
+**Assistant messages after streaming completes:**
+- **ConfidenceBadge**: horizontal progress bar with labelled tier and percentage.
+- **Summary line**: single sentence composed from confidence level + one dominant quality signal (critique type if `incomplete`/`not_grounded`, or decision strength if `weak`, otherwise the action label).
+- **RetryBadge**: emerald "Answer improved after self-correction" badge, shown only when `retried === true`.
+- **SourceChips**: clickable paper title chips linking to source URLs; non-clickable chips for sources without a URL.
+- **StatusBanner**: amber/orange/red banner for `low_confidence`, `fallback`, or `error` statuses; hidden on `success`.
+- **QualityWarnings**: inline amber warning rows for `incomplete` and `not_grounded` critique types and `weak` decision strength.
+- **Debug panel** (toggle per message): table showing action, retrieval quality description, confidence reasoning, decision strength, critique type, critique score, retried flag, per-stage latency (retrieve/rerank/LLM ms), and total wall-clock time.
+- Per-stage latency row shown below the bubble when the debug panel is hidden.
+
+---
+
+### ConfidenceBadge (`components/ConfidenceBadge.tsx`)
+
+| Score range | Label | Colour |
+|-------------|-------|--------|
+| ≥ 0.85 | Very high | emerald |
+| ≥ 0.70 | High | emerald |
+| ≥ 0.40 | Moderate | amber |
+| < 0.40 | Low | red |
+
+---
+
+### API Route (`app/api/stream/route.ts`)
+- Next.js route handler that POSTs to `${BACKEND_URL}/stream` and forwards the SSE body to the browser without buffering.
+- `BACKEND_URL` env var (default `http://localhost:8000`). Server-side timeout: 180 seconds.
+
+---
+
+## 6. Decision Intelligence
+
+### Multi-Signal Policy
+
+`should_trigger_ingestion()` evaluates rules in order; first match wins:
+
+| Rule | Condition | Reason | Strength |
+|------|-----------|--------|----------|
+| 0 — Entity coverage | Key query entities absent from combined retrieved doc text (only when `rerank_norm` is available) | `low_relevance` | `strong` |
+| 1 — Low coverage | `n_docs < 3` | `low_docs` | `strong` (0 docs) / `moderate` (1–2 docs) |
+| 2 — Weak retrieval | `retrieval_norm < 0.3` AND `rerank_norm < 0.4` | `low_relevance` | `strong` / `moderate` |
+| 3 — High rerank noise | rerank variance > 9.0 AND `rerank_norm < 0.5` (requires ≥2 rerank scores) | `low_relevance` | `moderate` |
+| 4 — LLM uncertainty | `llm_score < 0.3` AND `rerank_norm < 0.6` (requires both signals) | `low_confidence` | `strong` / `moderate` |
+| B — Borderline | `retrieval_norm ∈ [0.3, 0.4]` AND `rerank_norm ∈ [0.4, 0.5]` | `borderline` | `weak` (no ingestion triggered) |
+| — Sufficient | All rules passed | `sufficient_context` | `strong` or `moderate` |
+
+Rules requiring signals not yet available at a given phase are skipped automatically. The function is called at three phases with progressively richer signal sets.
+
+---
+
+### Three Ingestion Check Phases
+
+| Phase | When | Signals available |
+|-------|------|-------------------|
+| 2a | After initial retrieval, before rerank | `n_docs`, `retrieval_norm` |
+| 2b | After rerank | `n_docs`, `retrieval_norm`, `rerank_scores`, `rerank_norm` |
+| 2c (sync only) | After LLM confidence check | All signals including `llm_score` |
+
+---
+
+### Decision Strength
+- `strong` / `moderate` / `weak` depending on distance from thresholds.
+- Propagated to `state._decision_strength` and returned in the `done` SSE event.
+- Gating condition for the self-critique retry: only `weak` decisions allow a retry attempt.
+- Surfaced in the frontend summary line and debug panel.
+
+---
+
+### Decision Trace Fields
+All three are computed from already-available signals — no additional LLM calls:
+
+- `retrieval_quality`: one-sentence description of doc count, cosine similarity mean, rerank mean and variance.
+- `action`: one of six action strings mapped from the ingestion reason.
+- `confidence_reasoning`: one sentence identifying the weakest signal and explaining the composite score tier.
+
+---
+
+## 7. Self-Correction System
+
+### Critique Scoring (`core/critique.py`)
+- Called after answer generation on the sync path, if `state.is_fallback` is False.
+- One Groq call: `llama-3.1-8b-instant`, `max_tokens=100`, `temperature=0.0`.
+- Scores the answer on correctness, completeness, and grounding relative to the retrieved context.
+- Returns `(score: float [0,1], reason: str, critique_type: str)`.
+- On any parse failure, defaults to `(0.5, "scoring error", "good")` — fails open.
+
+---
+
+### Critique Types
+
+| Type | Meaning |
+|------|---------|
+| `incomplete` | Answer is missing key information needed to fully address the query |
+| `incorrect` | Answer contains factual errors relative to the context |
+| `not_grounded` | Answer makes claims not traceable to the provided context |
+| `good` | Answer is correct, complete, and grounded |
+
+---
+
+### Retry Trigger Conditions
+All three conditions must hold simultaneously:
+1. `state._decision_strength == "weak"` (borderline ingestion decision)
+2. `state._critique_score < 0.6`
+3. `state._retried == False` (at most one retry per request)
+
+---
+
+### Type-Aware Retry Strategies (`_retry_with_expanded_context`)
+
+| Critique Type | Retrieval Strategy |
+|---------------|-------------------|
+| `incomplete` | Query transform + retrieve with `top_k = num_papers + 2` + rerank — pulls in more candidate documents for broader coverage |
+| `incorrect` | Query transform + retrieve + rerank with `top_k = 3` — fewer, higher-precision documents to reduce factual noise |
+| `not_grounded` | Query transform + retrieve + full rerank, then filter to docs with `rerank_score ≥ 6.0`; falls back to top-1 if nothing passes the filter |
+| default / `good` | Same strategy as the original retrieval pass |
+
+---
+
+### Retry Acceptance Logic
+- After the retry, `critique_answer` is called again on the new answer.
+- The retry is accepted only if `new_score ≥ original_score + 0.05`.
+- If the improvement threshold is not met, the original answer, score, reason, and critique type are all restored.
+
+---
+
+## 8. API Contract
+
+### POST `/query`
+
+**Request body:**
+```json
+{
+  "query": "What is retrieval-augmented generation?",
+  "history": [
+    { "query": "What are language models?", "answer": "..." }
+  ]
+}
 ```
+- `query`: required, non-blank string.
+- `history`: optional list of prior turns; the pipeline uses the last 3.
+
+**Response body (`QueryResponse`):**
+```json
+{
+  "answer": "**Explanation:** ...\n\n**Key Points:**\n- ...",
+  "confidence": 0.7312,
+  "status": "success",
+  "history": [{ "query": "...", "answer": "..." }],
+  "sources": [
+    { "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks", "url": "https://arxiv.org/abs/2005.11401" }
+  ],
+  "latency": {
+    "retrieve_ms": 310,
+    "rerank_ms": 840,
+    "llm_ms": 1450
+  },
+  "decision_trace": {
+    "retrieval_quality": "Moderate retrieval quality: 5 docs, retrieval=0.42, rerank mean=6.2/10.",
+    "action": "used_existing_knowledge",
+    "confidence_reasoning": "Moderate confidence: rerank signal (0.62) is the limiting factor; other signals are adequate."
+  }
+}
+```
+
+**Status values:** `success` | `low_confidence` | `fallback` | `error`
+
+---
+
+### POST `/stream`
+
+**Request:** same body as `/query`.
+
+**Response:** Server-Sent Events stream. Each line follows the format `data: <JSON>\n\n`.
+
+**Token event** (one per LLM output chunk):
+```json
+{ "type": "token", "content": "chunk of answer text" }
+```
+
+**Done event** (once, after all tokens):
+```json
+{
+  "type": "done",
+  "confidence": 0.7312,
+  "status": "success",
+  "sources": [{ "title": "...", "url": "..." }],
+  "history": [{ "query": "...", "answer": "..." }],
+  "latency": { "retrieve_ms": 310, "rerank_ms": 840, "llm_ms": 1450 },
+  "decision_trace": {
+    "retrieval_quality": "...",
+    "action": "...",
+    "confidence_reasoning": "..."
+  },
+  "critique_type": "good",
+  "critique_score": 0.0,
+  "retried": false,
+  "decision_strength": "moderate"
+}
+```
+
+**Error event:**
+```json
+{ "type": "error", "message": "error description" }
+```
+
+> **Note:** The `/stream` path does not run `CritiqueAgent` text refinement or the conditional self-critique retry. Composite confidence and status are computed. `critique_score` is 0.0 and `critique_type` is empty string on the stream path.
+
+---
+
+## 9. How to Run
+
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+- A Pinecone serverless index named `re-search` (dimension=768, cosine metric, AWS us-east-1)
+- API keys for Groq, Pinecone, and Tavily
+
+---
+
+### Environment Variables
 
 Create a `.env` file in the project root:
 
 ```env
-GROQ_API_KEY=your_groq_key
-PINECONE_API_KEY=your_pinecone_key
-PINECONE_INDEX_NAME=your_index_name
-TAVILY_API_KEY=your_tavily_key
+GROQ_API_KEY=<your Groq API key>
+PINECONE_API_KEY=<your Pinecone API key>
+TAVILY_API_KEY=<your Tavily API key>
+
+# Optional (defaults shown)
+ALLOWED_ORIGINS=http://localhost:3000
+CACHE_TTL_SECONDS=600
+CACHE_MAX_ENTRIES=100
+RATE_LIMIT_RPM=20
+RATE_LIMIT_WINDOW=60
 ```
 
 ---
 
-## ▶️ Usage
+### Backend
 
-**Backend API (FastAPI)**
 ```bash
-cd backend
-../.venv/Scripts/python -m uvicorn api.app:app --reload
+# From the project root
+pip install -r requirements.txt
+
+# Start the FastAPI server
+uvicorn backend.api.app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-**POST /query**
-```json
-{ "query": "Compare transformers with RNNs" }
-```
-```json
-{
-  "answer": "**Explanation:** ...\n\n**Key Points:**\n- ...\n\n**Sources:**\n- ...",
-  "confidence": 0.81,
-  "history": [...]
-}
-```
-
-**Frontend UI**
-
-Open `frontend/index.html` in a browser while the backend is running. No build step required.
-
-**CLI**
+Run the pipeline directly (no API):
 ```bash
 cd backend
 python main.py
 ```
 
----
-
-## 🧩 Design Decisions
-
-**Why confidence scoring instead of YES/NO sufficiency?**
-A binary check loses resolution. A score of 0.48 vs 0.12 both fail the threshold, but the former may improve after ingestion while the latter likely won't. The float also surfaces in the API response, giving callers the option to display or act on it.
-
-**Why median for the relevance guard?**
-Average rerank score is skewed by outliers. A single highly relevant document in a set of irrelevant ones could mask poor retrieval. Median is resistant to this. The additional `low_quality_count >= total // 2` condition catches the case where most documents are weak but none are extreme enough to drag the median below threshold alone.
-
-**Why max-1 ingestion retry?**
-Ingestion is expensive — it involves web search, downloading, preprocessing, embedding, and indexing. Unbounded retries would make the system unusable for queries with no indexed content. One retry handles cold-start indexes; further retries are unlikely to help and add significant latency.
-
-**Why skip critique for fallback responses?**
-The critique agent expects structured content. Given a single plain sentence, it reformats it into a structured block — producing a fabricated "explanation" of a refusal. Skipping critique for fallbacks preserves the minimal, unambiguous message intact.
-
-**Why a deterministic post-filter in the critique agent?**
-LLMs don't reliably follow content-removal instructions. After the LLM critique pass, a regex-based sentence filter re-checks the answer against query entities — catching off-topic content the LLM left in, without depending on prompt compliance.
+Run the offline evaluation suite:
+```bash
+cd backend
+python -m evaluation.evaluator
+```
 
 ---
 
-## 📈 Future Improvements
+### Frontend
 
-- **Confidence calibration** — The 0–1 score is LLM-estimated; calibrate against a labeled evaluation set to make the 0.5 threshold more principled
-- **Hybrid retrieval** — Combine dense (Pinecone) with sparse (BM25); infrastructure partially in place (`hybrid_search.py`)
-- **Streaming responses** — Stream answer tokens to the frontend instead of blocking on full generation
-- **Persistent cache** — Move embedding/retrieval cache to disk or Redis for cross-session reuse
-- **Evaluation harness** — Automate answer quality measurement using the existing `evaluation/` module
-- **Deployment** — Containerize backend + frontend; add health check endpoint
+```bash
+cd frontend-next
 
----
+# Set backend URL if not on localhost:8000
+echo "BACKEND_URL=http://localhost:8000" > .env.local
 
-## 👤 Author
+npm install
+npm run dev
+```
 
-**Smaran Reddy**
-Built as a system-design-first exploration of production RAG patterns — focusing on reliability, modularity, and explicit failure handling over raw benchmark performance.
+The UI is available at `http://localhost:3000`.
 
 ---
 
-*Stack: Python · FastAPI · Pinecone · Groq (Llama 3.1) · Tavily · Streamlit (alt UI)*
+## 10. Example Flow
+
+**Query:** `"Explain transformers in deep learning"`
+
+1. **QueryTransformer** generates 5 variants: resolved query + HyDE passage + 3 variations.
+2. **RetrieverAgent** queries Pinecone with each variant; results are deduplicated → e.g., 12 raw docs.
+3. **Phase 2a check:** 12 docs, `retrieval_norm=0.48` → Rule 1 and Rule 2 not triggered.
+4. **Reranker** scores all 12 docs, selects top 5. Example scores: `[8.2, 7.1, 6.8, 5.4, 4.1]`.
+5. **Phase 2b check:** `rerank_norm=0.64`, entity coverage passes → `sufficient_context (moderate)`.
+6. **Phase 2c:** `get_context_confidence` returns 0.73 → no ingestion; confidence cached for reuse.
+7. **AnswerAgent:** confidence 0.73 > 0.5 → generates structured answer (Explanation + Key Points).
+8. **`critique_answer`:** score=0.81, type=`good` → retry condition not met, no retry.
+9. **CritiqueAgent:** minor scope enforcement; no lines removed.
+10. **`compute_composite`:** adaptive weights applied → `retrieval=0.48×0.24 + rerank=0.64×0.36 + llm=0.73×0.40` → composite ≈ 0.636.
+11. **`derive_status`:** 0.636 ≥ 0.40 → `success`.
+12. **Response:** `confidence=0.636`, `action=used_existing_knowledge`, sources from Pinecone metadata.
+
+---
+
+## 11. Limitations
+
+- **Single retry only:** The self-correction loop runs at most once per request (`_retried` flag). There is no multi-turn refinement loop.
+- **No retry on streaming path:** The conditional retry and `CritiqueAgent` text refinement only run on the `/query` (sync) path, not `/stream`. The stream path also does not call `critique_answer`.
+- **In-memory state:** The response cache, retrieval cache, embedding cache, rate limiter, and `index_version` counter are all process-local. They reset on restart and are not shared across multiple worker processes.
+- **LLM-based reranker latency:** The reranker makes one Groq API call per retrieved document. For the default top-5 retrieval across 5 query variants, this can mean scoring up to 12+ documents individually. There is no batching.
+- **PDF download reliability:** The downloader includes URL fixups for arXiv, Springer, IEEE, and ACM. Papers hosted elsewhere may not yield accessible PDFs.
+- **Preprocessing truncation:** `Preprocessor` truncates text at the first occurrence of "References". Content in appendices or after the references section is discarded.
+- **Rate limiter is single-process only:** `InMemoryRateLimiter` does not share state across workers. The module docstring explicitly notes this and describes the Redis upgrade path.
+- **No persistence:** Chat history, source metadata, and ingested paper state are held in memory for the duration of the request. There is no cross-session persistence.

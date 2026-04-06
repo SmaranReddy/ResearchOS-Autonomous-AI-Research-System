@@ -1,0 +1,6 @@
+{
+  "title": "A Review on Generative Adversarial Networks: Algorithms ...",
+  "url": "https://arxiv.org/pdf/2001.06937.pdf",
+  "chars": 178077,
+  "preview": "JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2015 1\nA Review on Generative Adversarial Networks:\nAlgorithms, Theory, and Applications\nJie Gui, Zhenan Sun, Y onggang Wen, Dacheng Tao, Jieping Y e\nAbstract —Generative adversarial networks (GANs) are a hot research topic recently. GANs have been widely studied since 2014, and\na large number of algorithms have been proposed. However, there is few comprehensive study explaining the connections among\ndifferent GANs variants, and how they have evolved. In this paper, we attempt to provide a review on various GANs methods from the\nperspectives of algorithms, theory, and applications. Firstly, the motivations, mathematical representations, and structure of most GANs\nalgorithms are introduced in details. Furthermore, GANs have been combined with other machine learning algorithms for speciﬁc\napplications, such as semi-supervised learning, transfer learning, and reinforcement learning. This paper compares the commonalities\nand differences "
+}
