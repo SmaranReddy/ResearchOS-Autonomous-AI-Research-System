@@ -1,6 +1,0 @@
-{
-  "title": "[PDF] Comparison of BERT vs GPT - arXiv",
-  "url": "https://arxiv.org/pdf/2405.12990",
-  "chars": 24115,
-  "preview": "Comparison of BERT vs GPT  \nAlthough GPT receives all the publicity, is BERT the new XGBOOST?  \nEdward  Sharkey , Philip Treleaven  \nComputer Science  \n University College London  \nEdward.sharkey@ucl.ac.uk  \n \n \nABSTRACT  \n \nThe paper benchmarks several Transformer models  [4], to \nshow how these models can judge sentiment from a news \nevent. This signal can then be used for downstream modelling \nand signal identification for commodity trading. We find that \nfine-tuned BERT models outperform  fine-tuned or vanilla GPT \nmodels on this task. Transformer models have revolutioni zed \nthe field of natural language processing (NLP) in recent years, \nachieving state -of-the-art results on various tasks such as \nmachine translation, text summarization, question answering, \nand natural language generation. Among the most prominent \ntransformer models are Bidirectional Encoder Representations \nfrom Transformers  (BERT ) and Generative Pre -trained \nTransformer  (GPT ), which differ in their arch"
-}

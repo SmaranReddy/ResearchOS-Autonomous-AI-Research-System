@@ -1,6 +1,0 @@
-{
-  "title": "Classification of Hope in Textual Data using Transformer-Based ...",
-  "url": "https://arxiv.org/pdf/2511.12874.pdf",
-  "chars": 63936,
-  "preview": "Classification of Hope in Textual Data using\nTransformer-Based Models\nChukwuebuka Fortunate Ijezue1, Fredrick Eneye Tania-Amanda Nkoyo1,**and Maaz Amjad1,†\n1Department of Computer Science, Texas Tech University, Lubbock, Texas, United States\nAbstract\nThis paper presents a transformer-based approach for classifying hope expressions in text. We developed and\ncompared three architectures (BERT, GPT-2, and DeBERTa) for both binary classification (“Hope\" vs. “Not Hope\")\nand multiclass categorization (five hope-related categories). Our initial BERT implementation achieved 83.65%\nbinary and 74.87% multiclass accuracy. In the extended comparison, BERT demonstrated superior performance\n(84.49% binary, 72.03% multiclass accuracy) while requiring significantly fewer computational resources (443s\nvs. 704s training time) than newer architectures. GPT-2 showed lowest overall accuracy (79.34% binary, 71.29%\nmulticlass), while DeBERTa achieved moderate results (80.70% binary, 71.56% multiclass) but at"
-}

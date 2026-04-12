@@ -1,6 +1,0 @@
-{
-  "title": "Training a Helpful and Harmless Assistant with Reinforcement ...",
-  "url": "https://arxiv.org/pdf/2204.05862.pdf",
-  "chars": 238008,
-  "preview": "Training a Helpful and Harmless Assistant with\nReinforcement Learning from Human Feedback\nYuntao Bai\u0003, Andy Jones, Kamal Ndousse,\nAmanda Askell, Anna Chen, Nova DasSarma, Dawn Drain, Stanislav Fort,\nDeep Ganguli, Tom Henighan, Nicholas Joseph, Saurav Kadavath, Jackson Kernion,\nTom Conerly, Sheer El-Showk, Nelson Elhage, Zac Hatﬁeld-Dodds,\nDanny Hernandez, Tristan Hume, Scott Johnston, Shauna Kravec, Liane Lovitt,\nNeel Nanda, Catherine Olsson, Dario Amodei, Tom Brown, Jack Clark,\nSam McCandlish, Chris Olah, Ben Mann, Jared Kaplan\u0003\nAnthropic\nAbstract\nWe apply preference modeling and reinforcement learning from human feedback (RLHF)\nto ﬁnetune language models to act as helpful and harmless assistants. We ﬁnd this align-\nment training improves performance on almost all NLP evaluations, and is fully compatible\nwith training for specialized skills such as python coding and summarization. We explore\nan iterated online mode of training, where preference models and RL policies are updated\non a "
-}

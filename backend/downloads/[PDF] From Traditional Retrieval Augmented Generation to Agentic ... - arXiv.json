@@ -1,6 +1,0 @@
-{
-  "title": "[PDF] From Traditional Retrieval Augmented Generation to Agentic ... - arXiv",
-  "url": "https://arxiv.org/pdf/2511.18177",
-  "chars": 33819,
-  "preview": "Rethinking Retrieval: From Traditional Retrieval Augmented\nGeneration to Agentic and Non-Vector Reasoning Systems in the\nFinancial Domain for Large Language Models\nElias Lumer, Matt Melich, Olivia Zino, Elena Kim, Sara Dieter,\nPradeep Honaganahalli Basavaraju, Vamse Kumar Subbiah,\nJames A. Burke and Roberto Hernandez\nPricewaterhouseCoopers U.S.\nKeywords: Retrieval Augmented Generation, Large Language Models, Financial Q&A, Agentic AI\nAbstract: Recent advancements in Retrieval-Augmented Generation (RAG) have enabled Large Language Models to\nanswer financial questions using external knowledge bases of U.S. SEC filings, earnings reports, and regula-\ntory documents. However, existing work lacks systematic comparison of vector-based and non-vector RAG\narchitectures for financial documents, and the empirical impact of advanced RAG techniques on retrieval ac-\ncuracy, answer quality, latency, and cost remain unclear. We present the first systematic evaluation comparing\nvector-based agentic RAG"
-}

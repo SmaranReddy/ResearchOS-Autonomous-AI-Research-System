@@ -1,6 +1,0 @@
-{
-  "title": "Deep learning, transformers and graph neural networks: a linear ...",
-  "url": "https://link.springer.com/content/pdf/10.1007/s11075-025-02218-2.pdf",
-  "chars": 104907,
-  "preview": "RESEARCHhttps://doi.org/10.1007/s11075-025-02218-2\nAbstract\nIn an age where Artificial Intelligence (AI) is being integrated into nearly every \ndomain of science and engineering, it has become essential for experts in Nu -\nmerical Linear Algebra to explore the foundational elements of deep learning and \nidentify ways to contribute to its development. What’s particularly exciting is that \nNumerical Linear Algebra (NLA) lies at the heart of Machine Learning and more \nbroadly AI. All AI techniques fundamentally rely on four core components: data, \noptimization methods, statistical intuition, and linear algebra. The initial phase of \nany neural network model involves transforming the problem into one that can \nbe tackled using numerical methods, particularly through optimization techniques. \nThus, in Large Language Models (LLMs) this first step involves mapping words or \nsubwords into tokens, which are then embedded into Euclidean spaces. From that \npoint, LLMs rely heavily on vectors, mat"
-}

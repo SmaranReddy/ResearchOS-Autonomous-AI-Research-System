@@ -1,6 +1,0 @@
-{
-  "title": "Mapping out the Space of Human Feedback for Reinforcement ...",
-  "url": "https://arxiv.org/pdf/2411.11761.pdf",
-  "chars": 222990,
-  "preview": "Mapping out the Space of Human Feedback\nfor Reinforcement Learning: A Conceptual Framework\nYANNICK METZ, University of Konstanz, Germany and ETH Zurich, Switzerland\nDAVID LINDNER, ETH Zurich, Switzerland\nRAPHAËL BAUR, ETH Zurich, Switzerland\nMENNATALLAH EL-ASSADY, ETH Zurich, Switzerland\nHuman-Centered QualitiesInterface-Centered QualitiesModel-Centered Qualities\nInteractionReward SignalMetricsExplanationInteractive Communication InterfaceHuman FeedbackMachine FeedbackIMLXAIHuman IntentD1Expression FormD2Target RelationD4Target ActualityD6Content LevelTemp. GranularityD7EngagementD3D5Choice Set SizeD8ExclusivityD9\nExpressiveness       Cognitive EaseDefiniteness       Context IndependencePrecision         Unbiasedness         InformativenessQ1Q2Q3Q4Q5Q6Q7Human-Centered DimensionsModel-Centered DimensionsInterface-Centered Dimension\nFig. 1. In the context of Reinforcement Learning , we present a conceptual framework of human feedback based\non nine dimensions: We identify human-centered, "
-}

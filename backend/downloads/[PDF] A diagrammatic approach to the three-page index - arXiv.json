@@ -1,6 +1,0 @@
-{
-  "title": "[PDF] A diagrammatic approach to the three-page index - arXiv",
-  "url": "https://arxiv.org/pdf/2601.12846",
-  "chars": 25222,
-  "preview": "A DIAGRAMMATIC APPROACH TO THE THREE-PAGE\nINDEX\nHYUNGKEE YOO\nAbstract. The three-page index α3(L) is an invariant that measures\nthe complexity of representing a link Lin a three-page book. It is known\nthatα3(L) admits a linear upper boundin terms of the crossing number,\nwith equality realized by the Hopf link.\nIn this paper, we investigate the equality case of this bound from a\ndiagrammatic viewpoint. Starting from a reduced link diagr am, we con-\nstruct three-page presentations via binding circles arisi ng as boundaries\nof suitable contractible subcomplexes of the induced cell d ecomposition\nof the 2-sphere. This approach allows a reﬁned control of the number of\narcs in the resulting three-page presentation.\nAs a consequence, we prove that for any non-split, nontrivia l linkL\nother than the Hopf link,\nα3(L)≤3c(L)−1,\nand hence characterize completely the links for which α3(L) = 3c(L).\n1.Introduction\nStructuredembeddingsoflinksin R3provideacombinatorialwaytostudy\ntopological complexity."
-}

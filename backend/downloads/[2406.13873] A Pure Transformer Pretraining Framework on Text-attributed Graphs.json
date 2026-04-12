@@ -1,6 +1,0 @@
-{
-  "title": "[2406.13873] A Pure Transformer Pretraining Framework on Text-attributed Graphs",
-  "url": "https://arxiv.org/pdf/2406.13873.pdf",
-  "chars": 55713,
-  "preview": "A Pure Transformer Pretraining Framework on\nText-attributed Graphs\nYu Song, Haitao Mao, Jiachen Xiao, Jingzhe Liu, Zhikai Chen,\nWei Jin ,Carl Yang ,Jiliang Tang ,Hui Liu\n{songyu5, haitaoma, xiaojiac, liujin33, chenzh85, tangjili, liuhui7}@msu.edu\n{wei.jin, j.carlyang}@emory.edu\nAbstract\nPretraining plays a pivotal role in acquiring generalized knowledge from large-scale\ndata, achieving remarkable successes as evidenced by large models in CV and\nNLP. However, progress in the graph domain remains limited due to fundamental\nchallenges such as feature heterogeneity andstructural heterogeneity . Recently,\nincreasing efforts have been made to enhance node feature quality with Large\nLanguage Models (LLMs) on text-attributed graphs (TAGs), demonstrating superi-\nority to traditional bag-of-words or word2vec techniques. These high-quality node\nfeatures reduce the previously critical role of graph structure, resulting in a modest\nperformance gap between Graph Neural Networks (GNNs) and structure-"
-}

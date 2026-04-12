@@ -1,6 +1,0 @@
-{
-  "title": "[2106.04554] A Survey of Transformers - arXiv",
-  "url": "https://arxiv.org/pdf/2106.04554.pdf",
-  "chars": 140518,
-  "preview": "A Survey of Transformers\nTIANYANG LIN, YUXIN WANG, XIANGYANG LIU, and XIPENG QIU∗,School of Computer\nScience, Fudan University, China and Shanghai Key Laboratory of Intelligent Information Processing, Fudan\nUniversity, China\nTransformers have achieved great success in many artificial intelligence fields, such as natural language\nprocessing, computer vision, and audio processing. Therefore, it is natural to attract lots of interest from\nacademic and industry researchers. Up to the present, a great variety of Transformer variants (a.k.a. X-formers)\nhave been proposed, however, a systematic and comprehensive literature review on these Transformer variants\nis still missing. In this survey, we provide a comprehensive review of various X-formers. We first briefly\nintroduce the vanilla Transformer and then propose a new taxonomy of X-formers. Next, we introduce the\nvarious X-formers from three perspectives: architectural modification, pre-training, and applications. Finally,\nwe outline some p"
-}

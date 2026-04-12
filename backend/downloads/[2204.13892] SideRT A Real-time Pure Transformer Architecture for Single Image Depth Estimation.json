@@ -1,6 +1,0 @@
-{
-  "title": "[2204.13892] SideRT: A Real-time Pure Transformer Architecture for Single Image Depth Estimation",
-  "url": "https://arxiv.org/pdf/2204.13892.pdf",
-  "chars": 31749,
-  "preview": "SideRT: A Real-time Pure Transformer Architecture for Single Image Depth\nEstimation\nChang Shu ,Ziming Chen ,Lei Chen ,Kuan Ma ,Minghui Wang and Haibing Ren\nMeituan Group\nfshuchang02,chenziming02,makuan@meituan.com,chenlei90,wangminghui08,renhaibing g@meituan.com\nAbstract\nSince context modeling is critical for estimating\ndepth from a single image, researchers put tremen-\ndous effort into obtaining global context. Many\nglobal manipulations are designed for traditional\nCNN-based architectures to overcome the locality\nof convolutions. Attention mechanisms or trans-\nformers originally designed for capturing long-\nrange dependencies might be a better choice, but\nusually complicates architectures and could lead\nto a decrease in inference speed. In this work,\nwe propose a pure transformer architecture called\nSideRT that can attain excellent predictions in real-\ntime. In order to capture better global context,\nCross-Scale Attention (CSA) and Multi-Scale Re-\nﬁnement (MSR) modules are designed to"
-}

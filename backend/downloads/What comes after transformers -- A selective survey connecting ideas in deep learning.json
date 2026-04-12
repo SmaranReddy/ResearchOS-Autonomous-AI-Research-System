@@ -1,6 +1,0 @@
-{
-  "title": "What comes after transformers? -- A selective survey connecting ideas in deep learning",
-  "url": "https://arxiv.org/pdf/2408.00386.pdf",
-  "chars": 85719,
-  "preview": "What comes after transformers? – A selective survey\nconnecting ideas in deep learning⋆\nJohannes Schneider1\nUniversity of Liechtenstein, Vaduz, Liechtenstein\njohannes.schneider@uni.li\nAbstract. Transformers have become the de-facto standard model in artificial\nintelligence since 2017 despite numerous shortcomings ranging from energy in-\nefficiency to hallucinations. Research has made a lot of progress in improving\nelements of transformers, and, more generally, deep learning manifesting in many\nproposals for architectures, layers, optimization objectives, and optimization tech-\nniques. For researchers it is difficult to keep track of such developments on a\nbroader level. We provide a comprehensive overview of the many important, re-\ncent works in these areas to those who already have a basic understanding of deep\nlearning. Our focus differs from other works, as we target specifically novel, al-\nternative potentially disruptive approaches to transformers as well as successful\nideas of rec"
-}

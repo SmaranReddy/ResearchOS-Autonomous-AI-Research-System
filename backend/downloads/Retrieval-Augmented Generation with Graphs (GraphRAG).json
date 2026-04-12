@@ -1,6 +1,0 @@
-{
-  "title": "Retrieval-Augmented Generation with Graphs (GraphRAG)",
-  "url": "https://arxiv.org/pdf/2501.00309.pdf",
-  "chars": 360903,
-  "preview": "Retrieval-Augmented Generation with Graphs\n(GraphRAG)\nHaoyu Han1∗, Yu Wang2∗, Harry Shomer1, Kai Guo1, Jiayuan Ding5, Yongjia Lei2,\nMahantesh Halappanavar3, Ryan A. Rossi4, Subhabrata Mukherjee5, Xianfeng Tang6, Qi He6,\nZhigang Hua7, Bo Long7, Tong Zhao8, Neil Shah8, Amin Javari9, Yinglong Xia7, Jiliang Tang1\n1Michigan State University,2University of Oregon,3Pacific Northwest National Laboratory\n4Adobe Research,5Hippocratic AI,6Amazon,7Meta ,8Snap Inc., ,9The Home Depot,\n{hanhaoy1, shomerha, guokai1, tangjili}@msu.edu ,\n{yuwang, yongjia}@uoregon.edu ,hala@pnnl.gov ,ryarossi@gmail.com ,\n{jiayuan, subho}@hippocraticai.com ,{xianft, qih}@amazon.com ,\n{zhua, bolong, yxia}@meta.com ,{tong, nshah}@snap.com ,amin_javari@homedepot.com\nAbstract\nRetrieval-augmented generation (RAG) is a powerful technique that enhances down-\nstream task execution by retrieving additional information, such as knowledge,\nskills, and tools from external sources. Graph, by its intrinsic \"nodes connected by\nedges\" na"
-}

@@ -1,6 +1,0 @@
-{
-  "title": "[2504.12501] Reinforcement Learning from Human Feedback - arXiv",
-  "url": "https://arxiv.org/pdf/2504.12501.pdf",
-  "chars": 549905,
-  "preview": "Reinforcement Learning from Human Feedback\nA short introduction to RLHF and post-training focused on language models.\nNathan Lambert\n04 April 2026\nAbstract\nReinforcement learning from human feedback (RLHF) has become an important\ntechnical and storytelling tool to deploy the latest machine learning systems. In this\nbook, we hope to give a gentle introduction to the core methods for people with some\nlevel of quantitative background. The book starts with the origins of RLHF – both\nin recent literature and in a convergence of disparate fields of science in economics,\nphilosophy, and optimal control. We then set the stage with definitions, problem\nformulation, data collection, and other common math used in the literature. The core of\nthe book details every optimization stage in using RLHF, from starting with instruction\ntuning to training a reward model and finally all of rejection sampling, reinforcement\nlearning, and direct alignment algorithms. The book concludes with advanced topics –\n"
-}

@@ -1,6 +1,0 @@
-{
-  "title": "[2105.05537] Swin-Unet: Unet-like Pure Transformer for Medical Image Segmentation",
-  "url": "https://arxiv.org/pdf/2105.05537.pdf",
-  "chars": 33899,
-  "preview": "Swin-Unet: Unet-like Pure Transformer for\nMedical Image Segmentation\nHu Cao1y, Yueyue Wang2y, Joy Chen1, Dongsheng Jiang3\u0003, Xiaopeng Zhang3\u0003,\nQi Tian3\u0003, and Manning Wang2\n1Technische Universit at M unchen, M unchen, Germany\n2Fudan University, Shanghai, China\n3Huawei Technologies, Shanghai, China\nAbstract. In the past few years, convolutional neural networks (CNNs)\nhave achieved milestones in medical image analysis. Especially, the deep\nneural networks based on U-shaped architecture and skip-connections\nhave been widely applied in a variety of medical image tasks. How-\never, although CNN has achieved excellent performance, it cannot learn\nglobal and long-range semantic information interaction well due to the\nlocality of convolution operation. In this paper, we propose Swin-Unet,\nwhich is a Unet-like pure Transformer for medical image segmentation.\nThe tokenized image patches are fed into the Transformer-based U-\nshaped Encoder-Decoder architecture with skip-connections for local-\nglo"
-}

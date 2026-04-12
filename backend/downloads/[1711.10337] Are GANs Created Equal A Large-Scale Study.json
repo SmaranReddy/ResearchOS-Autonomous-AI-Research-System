@@ -1,6 +1,0 @@
-{
-  "title": "[1711.10337] Are GANs Created Equal? A Large-Scale Study",
-  "url": "https://arxiv.org/pdf/1711.10337.pdf",
-  "chars": 65722,
-  "preview": "Are GANs Created Equal? A Large-Scale Study\nMario Lucic?Karol Kurach?Marcin Michalski\nGoogle BrainOlivier Bousquet Sylvain Gelly\nAbstract\nGenerative adversarial networks (GAN) are a powerful subclass of generative\nmodels. Despite a very rich research activity leading to numerous interesting\nGAN algorithms, it is still very hard to assess which algorithm(s) perform better\nthan others. We conduct a neutral, multi-faceted large-scale empirical study on\nstate-of-the art models and evaluation measures. We ﬁnd that most models can\nreach similar scores with enough hyperparameter optimization and random restarts.\nThis suggests that improvements can arise from a higher computational budget and\ntuning more than fundamental algorithmic changes. To overcome some limitations\nof the current metrics, we also propose several data sets on which precision and\nrecall can be computed. Our experimental results suggest that future GAN research\nshould be based on more systematic and objective evaluation proc"
-}

@@ -1,6 +1,0 @@
-{
-  "title": "[PDF] Toward a Theory of Hierarchical Memory for Language Agents - arXiv",
-  "url": "https://arxiv.org/pdf/2603.21564v1?ref=taaft&utm_source=taaft&utm_medium=referral",
-  "chars": 31805,
-  "preview": "Published as a conference paper at ICLR 2026\nTOWARD ATHEORY OFHIERARCHICALMEMORY FOR\nLANGUAGEAGENTS\nYashar Talebirad\nUniversity of Alberta\ntalebira@ualberta.caAli Parsaee\nUniversity of Alberta\nParsaee@ualberta.caCsongor Y. Szepesvari\nUniversity of Alberta\ncsongor@ualberta.ca\nAmirhossein Nadiri\nYork University\nanadiri@yorku.caOsmar Zaiane\nUniversity of Alberta\nzaiane@ualberta.ca\nABSTRACT\nMany recent long-context and agentic systems address context-length limitations\nby addinghierarchical memory: they extract atomic units from raw data, build\nmulti-level representatives by grouping and compression, and traverse this struc-\nture to retrieve content under a token budget. Despite recurring implementations,\nthere is no shared formalism for comparing design choices. We propose a unify-\ning theory in terms of three operators.Extraction(α) maps raw data to atomic\ninformation units;coarsening(C= (π, ρ)) partitions units and assigns a repre-\nsentative to each group; andtraversal(τ) selects which "
-}

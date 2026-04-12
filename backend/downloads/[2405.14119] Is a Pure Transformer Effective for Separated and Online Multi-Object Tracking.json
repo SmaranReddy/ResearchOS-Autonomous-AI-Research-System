@@ -1,6 +1,0 @@
-{
-  "title": "[2405.14119] Is a Pure Transformer Effective for Separated and Online Multi-Object Tracking?",
-  "url": "https://arxiv.org/pdf/2405.14119.pdf",
-  "chars": 70782,
-  "preview": "Is a Pure Transformer Effective for Separated and\nOnline Multi-Object Tracking?\nChongwei Liu1Haojie Li1,2Zhihui Wang1Rui Xu1∗\n1Dalian University of Technology\n2Shandong University of Science and Technology\nlcwdllg@mail.dlut.edu.cn hjli@sdust.edu.cn\nzhwang@dlut.edu.cn xurui@dlut.edu.cn\nAbstract\nRecent advances in Multi-Object Tracking (MOT) have demonstrated significant\nsuccess in short-term association within the separated tracking-by-detection online\nparadigm. However, long-term tracking remains challenging. While graph-based\napproaches address this by modeling trajectories as global graphs, these methods\nare unsuitable for real-time applications due to their non-online nature. In this\npaper, we review the concept of trajectory graphs and propose a novel perspec-\ntive by representing them as directed acyclic graphs. This representation can be\ndescribed using frame-ordered object sequences and binary adjacency matrices.\nWe observe that this structure naturally aligns with Transformer a"
-}

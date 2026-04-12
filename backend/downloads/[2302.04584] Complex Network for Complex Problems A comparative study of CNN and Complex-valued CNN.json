@@ -1,6 +1,0 @@
-{
-  "title": "[2302.04584] Complex Network for Complex Problems: A comparative study of CNN and Complex-valued CNN",
-  "url": "https://arxiv.org/pdf/2302.04584.pdf",
-  "chars": 22155,
-  "preview": "Complex Network for Complex Problems: A\ncomparative study of CNN and Complex-valued\nCNN\nSoumick Chatterjee§\u0003yz, Pavan Tummala§\u0003, Oliver Speckzx{and Andreas N ¨urnberger\u0003y{\n\u0003Faculty of Computer Science, Otto von Guericke University Magdeburg, Germany\nyData and Knowledge Engineering Group, Otto von Guericke University Magdeburg, Germany\nzBiomedical Magnetic Resonance, Otto von Guericke University Magdeburg, Germany\nxGerman Center for Neurodegenerative Disease, Magdeburg, Germany\n{Center for Behavioral Brain Sciences, Magdeburg, Germany\nAbstract —Neural networks, especially convolutional neural\nnetworks (CNN), are one of the most common tools these days\nused in computer vision. Most of these networks work with real-\nvalued data using real-valued features. Complex-valued convo-\nlutional neural networks (CV-CNN) can preserve the algebraic\nstructure of complex-valued input data and have the potential\nto learn more complex relationships between the input and the\nground-truth. Although some co"
-}

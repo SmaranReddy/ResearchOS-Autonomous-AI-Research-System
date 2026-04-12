@@ -1,6 +1,0 @@
-{
-  "title": "[PDF] A Comprehensive Review of Retrieval-Augmented Generation (RAG)",
-  "url": "https://arxiv.org/pdf/2410.12837",
-  "chars": 53983,
-  "preview": "A\nComprehensive\nSurvey\nof\nRetrieval-Augmented\nGeneration\n(RAG):\nEvolution,\nCurrent\nLandscape\nand\nFuture\nDirections\nShailja\nGupta\n(Carnegie\nMellon\nUniversity,\nUSA)\nRajesh\nRanjan\n(Carnegie\nMellon\nUniversity,\nUSA)\nSurya\nNarayan\nSingh\n(BIT\nSindri,\nIndia)\nAbstract\nThis\npaper\npresents\na\ncomprehensive\nstudy\nof\nRetrieval-Augmented\nGeneration\n(RAG),\ntracing\nits\nevolution\nfrom\nfoundational\nconcepts\nto\nthe\ncurrent\nstate\nof\nthe\nart.\nRAG\ncombines\nretrieval\nmechanisms\nwith\ngenerative\nlanguage\nmodels\nto\nenhance\nthe\naccuracy\nof\noutputs,\naddressing\nkey\nlimitations\nof\nLLMs.\nThe\nstudy\nexplores\nthe\nbasic\narchitecture\nof\nRAG,\nfocusing\non\nhow\nretrieval\nand\ngeneration\nare\nintegrated\nto\nhandle\nknowledge-intensive\ntasks.\nA\ndetailed\nreview\nof\nthe\nsignificant\ntechnological\nadvancements\nin\nRAG\nis\nprovided,\nincluding\nkey\ninnovations\nin\nretrieval-augmented\nlanguage\nmodels\nand\napplications\nacross\nvarious\ndomains\nsuch\nas\nquestion-answering,\nsummarization,\nand\nknowledge-based\ntasks.\nRecent\nresearch\nbreakthroughs\nare\nd"
-}

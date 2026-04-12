@@ -1,6 +1,0 @@
-{
-  "title": "[2304.10557] An Introduction to Transformers - arXiv",
-  "url": "https://arxiv.org/pdf/2304.10557.pdf",
-  "chars": 32648,
-  "preview": "An Introduction to Transformers\nRichard E. Turner\nDepartment of Engineering, University of Cambridge, UK\nMicrosoft Research, Cambridge, UK\nret26@cam.ac.uk\nAbstract.The transformer is a neural network component that can be used to learn useful represen-\ntations of sequences or sets of data-points [Vaswani et al., 2017]. The transformer has driven recent\nadvances in natural language processing [Devlin et al., 2019], computer vision [Dosovitskiy et al., 2021],\nand spatio-temporal modelling [Bi et al., 2022]. There are many introductions to transformers, but most\ndo not contain precise mathematical descriptions of the architecture and the intuitions behind the design\nchoices are often also missing.1Moreover, as research takes a winding path, the explanations for the\ncomponents of the transformer can be idiosyncratic. In this note we aim for a mathematically precise,\nintuitive, and clean description of the transformer architecture. We will not discuss training as this is\nrather standard. We"
-}

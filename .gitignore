@@ -1,7 +1,76 @@
+# =========================
+# ENV & SECRETS
+# =========================
 .env
+.env.*
+!.env.example
+
+# =========================
+# PYTHON
+# =========================
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
 .venv/
 venv/
+env/
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+
+# =========================
+# NODE / NEXT.JS
+# =========================
 node_modules/
+.next/
+out/
+dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# IDE / EDITOR
+# =========================
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# =========================
+# PROJECT-SPECIFIC
+# =========================
+
+# Local configs
+.claude/
+.cursor/
+*.local.json
+
+# Generated data
+downloads/
+paper_result.json
+retrieved_dump.json
+
+# Batch / experiments
+batch-tests/
+
+# Logs
 *.log
+
+# =========================
+# OPTIONAL (uncomment if needed)
+# =========================
+# checkpoints/
+# models/
+# embeddings_cache/

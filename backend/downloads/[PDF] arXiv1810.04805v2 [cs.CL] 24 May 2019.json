@@ -1,6 +1,0 @@
-{
-  "title": "[PDF] arXiv:1810.04805v2 [cs.CL] 24 May 2019",
-  "url": "https://arxiv.org/pdf/1810.04805",
-  "chars": 64048,
-  "preview": "BERT: Pre-training of Deep Bidirectional Transformers for\nLanguage Understanding\nJacob Devlin Ming-Wei Chang Kenton Lee Kristina Toutanova\nGoogle AI Language\nfjacobdevlin,mingweichang,kentonl,kristout g@google.com\nAbstract\nWe introduce a new language representa-\ntion model called BERT , which stands for\nBidirectional Encoder Representations from\nTransformers. Unlike recent language repre-\nsentation models (Peters et al., 2018a; Rad-\nford et al., 2018), BERT is designed to pre-\ntrain deep bidirectional representations from\nunlabeled text by jointly conditioning on both\nleft and right context in all layers. As a re-\nsult, the pre-trained BERT model can be ﬁne-\ntuned with just one additional output layer\nto create state-of-the-art models for a wide\nrange of tasks, such as question answering and\nlanguage inference, without substantial task-\nspeciﬁc architecture modiﬁcations.\nBERT is conceptually simple and empirically\npowerful. It obtains new state-of-the-art re-\nsults on eleven natural la"
-}

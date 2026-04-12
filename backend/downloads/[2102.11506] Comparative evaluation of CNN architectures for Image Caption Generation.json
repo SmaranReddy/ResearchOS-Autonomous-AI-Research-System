@@ -1,6 +1,0 @@
-{
-  "title": "[2102.11506] Comparative evaluation of CNN architectures for Image Caption Generation",
-  "url": "https://arxiv.org/pdf/2102.11506.pdf",
-  "chars": 52805,
-  "preview": "(IJACSA) International Journal of Advanced Computer Science and Applications,\nVol. 11, No. 12, 2020\nComparative evaluation of CNN architectures for\nImage Caption Generation\nSulabh Katiyar\nDepartment of\nComputer Science and Engineering\nNational Institute of Technology, Silchar\nAssam, India 788010Samir Kumar Borgohain\nDepartment of\nComputer Science and Engineering\nNational Institute of Technology, Silchar\nAssam, India 788010\nAbstract —Aided by recent advances in Deep Learning, Image\nCaption Generation has seen tremendous progress over the\nlast few years. Most methods use transfer learning to extract\nvisual information, in the form of image features, with the help\nof pre-trained Convolutional Neural Network models followed\nby transformation of the visual information using a Caption\nGenerator module to generate the output sentences. Different\nmethods have used different Convolutional Neural Network\nArchitectures and, to the best of our knowledge, there is no\nsystematic study which compares"
-}

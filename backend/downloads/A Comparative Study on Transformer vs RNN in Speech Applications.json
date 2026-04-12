@@ -1,6 +1,0 @@
-{
-  "title": "A Comparative Study on Transformer vs RNN in Speech Applications",
-  "url": "https://arxiv.org/pdf/1909.06317.pdf",
-  "chars": 40080,
-  "preview": "A COMPARATIVE STUDY ON TRANSFORMER VS RNN IN SPEECH APPLICATIONS\nShigeki Karita1,\n(Alphabetical Order) Nanxin Chen3, Tomoki Hayashi5;6, Takaaki Hori7, Hirofumi Inaguma8, Ziyan Jiang3,\nMasao Someki5, Nelson Enrique Yalta Soplin2, Ryuichi Yamamoto4, Xiaofei Wang3, Shinji Watanabe3,\nTakenori Yoshimura5;6, Wangyou Zhang9\n1NTT Communication Science Laboratories,2Waseda University,3Johns Hopkins University,\n4LINE Corporation,5Nagoya University,6Human Dataware Lab. Co., Ltd.,\n7Mitsubishi Electric Research Laboratories,8Kyoto University,9Shanghai Jiao Tong University\nABSTRACT\nSequence-to-sequence models have been widely used in end-to-\nend speech processing, for example, automatic speech recognition\n(ASR), speech translation (ST), and text-to-speech (TTS). This\npaper focuses on an emergent sequence-to-sequence model called\nTransformer, which achieves state-of-the-art performance in neural\nmachine translation and other natural language processing applica-\ntions. We undertook intensive studies i"
-}

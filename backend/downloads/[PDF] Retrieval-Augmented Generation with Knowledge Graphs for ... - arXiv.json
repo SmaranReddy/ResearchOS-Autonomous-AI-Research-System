@@ -1,6 +1,0 @@
-{
-  "title": "[PDF] Retrieval-Augmented Generation with Knowledge Graphs for ... - arXiv",
-  "url": "https://arxiv.org/pdf/2404.17723?",
-  "chars": 26502,
-  "preview": "Retrieval-Augmented Generation with Knowledge Graphs for\nCustomer Service Question Answering\nZhentao Xu\nzhexu@linkedin.com\nLinkedIn Corporation\nSunnyvale, CA, USAMark Jerome Cruz\nmarcruz@linkedin.com\nLinkedIn Corporation\nSunnyvale, CA, USAMatthew Guevara\nmguevara@linkedin.com\nLinkedIn Corporation\nSunnyvale, CA, USA\nTie Wang\ntiewang@linkedin.com\nLinkedIn Corporation\nSunnyvale, CA, USAManasi Deshpande\nmadeshpande@linkedin.com\nLinkedIn Corporation\nSunnyvale, CA, USAXiaofeng Wang\nxiaofwang@linkedin.com\nLinkedIn Corporation\nSunnyvale, CA, USA\nZheng Li\nzeli@linkedin.com\nLinkedIn Corporation\nSunnyvale, CA, USA\nABSTRACT\nIn customer service technical support, swiftly and accurately re-\ntrieving relevant past issues is critical for efficiently resolving cus-\ntomer inquiries. The conventional retrieval methods in retrieval-\naugmented generation (RAG) for large language models (LLMs)\ntreat a large corpus of past issue tracking tickets as plain text, ig-\nnoring the crucial intra-issue structure and"
-}

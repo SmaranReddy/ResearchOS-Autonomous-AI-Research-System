@@ -1,6 +1,0 @@
-{
-  "title": "[2305.18438] Reinforcement Learning with Human Feedback",
-  "url": "https://arxiv.org/pdf/2305.18438.pdf",
-  "chars": 100912,
-  "preview": "arXiv:2305.18438v3  [cs.LG]  3 Jul 2023Reinforcement Learning with Human Feedback: Learning Dyna mic\nChoices via Pessimism\nZihao Li∗Zhuoran Yang†Mengdi Wang‡\nMay 2023\nAbstract\nIn this paper, we study oﬄine Reinforcement Learning with Hu man Feedback (RLHF) where we\naim to learn the human’s underlying reward and the MDP’s opti mal policy from a set of trajectories\ninduced by human choices. RLHF is challenging for multiple r easons: large state space but limited\nhuman feedback, the bounded rationality of human decisions , and the oﬀ-policy distribution shift. In\nthis paper, we focus on the Dynamic Discrete Choice (DDC) mod el for modeling and understanding\nhuman choices. DCC, rooted in econometrics and decision the ory, is widely used to model a human\ndecision-making process with forward-looking and bounded rationality. We propose a D ynamic-C hoice-\nPessimistic-P olicy-Optimization (DCPPO) method. The method involves a three-st age process: The\nﬁrst step is to estimate the human behavio"
-}
