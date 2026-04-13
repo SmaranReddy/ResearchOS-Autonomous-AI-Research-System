@@ -13,16 +13,15 @@ __pycache__/
 *.pyo
 *.pyd
 *.so
-
-# Virtual environments
 .venv/
 venv/
 env/
-
-# Python build artifacts
 build/
 dist/
 *.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # =========================
 # NODE / NEXT.JS
@@ -31,46 +30,38 @@ node_modules/
 .next/
 out/
 dist/
-
-# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
 # =========================
-# IDE / EDITOR
+# DOCKER
 # =========================
-.vscode/
-.idea/
+*.env.docker
+docker-compose.override.yml
 
-# OS files
+# =========================
+# LOGS
+# =========================
+*.log
+logs/
+
+# =========================
+# OS / IDE
+# =========================
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
 
 # =========================
 # PROJECT-SPECIFIC
 # =========================
-
-# Local configs
-.claude/
-.cursor/
-*.local.json
-
-# Generated data
 downloads/
 paper_result.json
 retrieved_dump.json
-
-# Batch / experiments
 batch-tests/
-
-# Logs
-*.log
-
-# =========================
-# OPTIONAL (uncomment if needed)
-# =========================
-# checkpoints/
-# models/
-# embeddings_cache/
+*.local.json
+.claude/
+.cursor/
