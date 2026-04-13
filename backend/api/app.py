@@ -28,6 +28,18 @@ app = FastAPI(title="re-search API")
 
 
 @app.on_event("startup")
+async def _validate_env():
+    """Warn at startup if required API keys are absent — easier to debug than a mid-request crash."""
+    required = {
+        "GROQ_API_KEY":    "Groq LLM calls will fail",
+        "PINECONE_API_KEY": "Vector retrieval will fail",
+    }
+    for var, consequence in required.items():
+        if not os.getenv(var):
+            print(f"[WARN] Missing env var {var!r} — {consequence}")
+
+
+@app.on_event("startup")
 async def _warmup_pinecone():
     """
     Fire a cheap Pinecone query on server startup so the first real user
@@ -50,6 +62,15 @@ app.add_middleware(
 
 
 # ---------------------------------------------------------------------------
+# GET /health — lightweight liveness probe used by Docker healthcheck
+# ---------------------------------------------------------------------------
+
+@app.get("/health", include_in_schema=False)
+def health():
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
 
@@ -59,6 +80,7 @@ ResponseStatus = Literal["success", "low_confidence", "fallback", "error"]
 class QueryRequest(BaseModel):
     query: str
     history: Optional[List[dict]] = None
+    disable_retry: bool = False
 
     @validator("query")
     def query_not_empty(cls, v: str) -> str:
@@ -93,6 +115,7 @@ class QueryResponse(BaseModel):
     sources:        List[SourceItem] = []
     latency:        LatencyInfo = LatencyInfo()
     decision_trace: DecisionTrace = DecisionTrace()
+    retried:        bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -107,6 +130,7 @@ def _build_response(
     latency_ms: dict,
     status: str,
     decision_trace: dict | None = None,
+    retried: bool = False,
 ) -> QueryResponse:
     return QueryResponse(
         answer=answer,
@@ -121,6 +145,7 @@ def _build_response(
             total_ms=latency_ms.get("total_ms", 0),
         ),
         decision_trace=DecisionTrace(**(decision_trace or {})),
+        retried=retried,
     )
 
 
@@ -151,9 +176,10 @@ def query(request: QueryRequest):
     # --- Pipeline ---
     try:
         print(f"[RETRIEVE_START] query='{request.query[:80]}'")
-        answer, confidence, updated_history, sources, latency_ms, status, decision_trace = run_pipeline(
+        answer, confidence, updated_history, sources, latency_ms, status, decision_trace, retried = run_pipeline(
             request.query,
             chat_history=history,
+            disable_retry=request.disable_retry,
         )
     except Exception as e:
         print(f"[ERROR] Pipeline exception: {e}")
@@ -174,7 +200,7 @@ def query(request: QueryRequest):
             history=history,
         )
 
-    response = _build_response(answer, confidence, updated_history, sources, latency_ms, status, decision_trace)
+    response = _build_response(answer, confidence, updated_history, sources, latency_ms, status, decision_trace, retried)
 
     log_request(
         query=request.query,

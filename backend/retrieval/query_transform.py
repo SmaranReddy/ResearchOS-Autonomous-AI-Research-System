@@ -1,5 +1,5 @@
 import os
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -12,48 +12,51 @@ class QueryTransformer:
     Returns a list: [original_query, HyDE_rewrite, variation1, variation2, variation3]
     """
 
+    # Hard cap on each parallel LLM call — if Groq is slow, don't let
+    # query_transform block the whole pipeline.
+    _TRANSFORM_FUTURE_TIMEOUT = 4.0   # seconds per future
+
     def __init__(self):
-        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        # 4 s HTTP timeout — HyDE (80 tokens) and expand (50 tokens) are tiny;
+        # they should complete in <1 s normally, never need 10 s.
+        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=4.0)
         self.model = "llama-3.1-8b-instant"
 
     def _hyde(self, query: str) -> str:
-        """Generate a HyDE (hypothetical document) passage for the query."""
+        """Generate a short HyDE passage for semantic retrieval augmentation."""
         prompt = (
-            f"Write a short, dense academic passage (3-5 sentences) that directly "
-            f"answers the following research question. Do not add a preamble.\n\n"
-            f"Question: {query}"
+            f"Write a 2-sentence academic passage that directly answers: {query}\n"
+            f"No preamble. Be concise and factual."
         )
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.2,
-                max_tokens=200,
+                max_tokens=80,   # reduced from 200 — shorter passage, faster generation
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
-            print(f"[ERROR] HyDE generation failed: {e} — using original query as fallback")
-            return query
+            print(f"[ERROR] HyDE generation failed: {type(e).__name__} — skipping HyDE")
+            return ""   # empty → caller drops it; don't fall back to query (avoids duplicate)
 
     def _expand(self, query: str) -> list[str]:
         """Generate 2 distinct query variations."""
         prompt = (
-            f"Generate exactly 2 different search queries for retrieving research papers "
-            f"about the following topic. Each query should approach the topic from a different angle. "
-            f"Output only the 2 queries, one per line, no numbering or extra text.\n\n"
-            f"Topic: {query}"
+            f"Generate exactly 2 short search queries for finding research papers about: {query}\n"
+            f"Output only the 2 queries, one per line, no numbering."
         )
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
-                max_tokens=100,
+                max_tokens=60,   # reduced from 100 — two short queries fit in 60 tokens
             )
             lines = [l.strip() for l in response.choices[0].message.content.strip().splitlines() if l.strip()]
             return lines[:2]
         except Exception as e:
-            print(f"[ERROR] Query expansion failed: {e} — returning empty variations")
+            print(f"[ERROR] Query expansion failed: {type(e).__name__} — returning empty variations")
             return []
 
     def _resolve_with_history(self, query: str, chat_history: list) -> str:
@@ -111,14 +114,17 @@ class QueryTransformer:
             if chat_history
             else query
         )
-        # Run HyDE and expand concurrently — both depend only on resolved query
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            hyde_future = pool.submit(self._hyde, resolved)
-            expand_future = pool.submit(self._expand, resolved)
-            hyde = hyde_future.result()
-            variations = expand_future.result()
-        # Cap at 3 — executor enforces the same limit, but apply it here
-        # so the logged count is accurate before retrieval starts.
-        queries = ([resolved, hyde] + variations)[:3]
-        print(f"[MULTI-QUERY] generated queries: {len(queries)} (1 resolved + 1 HyDE + {len(variations)} variations, capped at 3)")
+        # Single expand call — generates 2 query variations in one API call.
+        # HyDE (hypothetical document) was a second parallel call that roughly
+        # doubled the Groq RPM consumption; removing it stays within the 30 RPM
+        # free-tier limit while preserving multi-query retrieval via expand.
+        # Result: [resolved, var1, var2] — still 3 Pinecone queries.
+        try:
+            variations = self._expand(resolved)
+        except (FutureTimeoutError, Exception) as e:
+            print(f"[WARN] expand failed ({type(e).__name__}) — falling back to single query")
+            variations = []
+
+        queries = ([resolved] + variations)[:3]
+        print(f"[MULTI-QUERY] {len(queries)} queries  (resolved + {len(variations)} variations, no HyDE)")
         return queries

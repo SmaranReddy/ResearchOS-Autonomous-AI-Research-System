@@ -15,7 +15,9 @@ class Reranker:
     """
 
     def __init__(self):
-        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        # 4 s timeout — batch rerank uses max_tokens=50 and short passages;
+        # should complete in <1 s normally.  Tight cap prevents blocking the pipeline.
+        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=4.0)
         self.model = "llama-3.1-8b-instant"
 
     def _batch_score(self, query: str, docs: List[Dict]) -> List[float]:
@@ -23,9 +25,10 @@ class Reranker:
         if not docs:
             return []
 
-        # Build a numbered list of passages
+        # 250 chars per passage (down from 600) — halves prompt tokens while
+        # preserving enough context for relevance judgement.
         passages = "\n\n".join(
-            f"[{i+1}] {doc.get('text', '')[:600]}"
+            f"[{i+1}] {doc.get('text', '')[:250]}"
             for i, doc in enumerate(docs)
         )
 
@@ -50,8 +53,11 @@ class Reranker:
             scores = (scores + [0.0] * len(docs))[:len(docs)]
             return scores
         except Exception as e:
-            print(f"[WARN] Batch rerank failed ({e}) — assigning zero scores")
-            return [0.0] * len(docs)
+            print(f"[WARN] Batch rerank failed ({type(e).__name__}) — falling back to cosine similarity")
+            # Use Pinecone cosine similarity scores (scaled to 0-10) so the
+            # Phase 2c rerank-median check still works correctly and doesn't
+            # mistakenly trigger an extra LLM confidence call.
+            return [min(doc.get("score", 0.0) * 10.0, 10.0) for doc in docs]
 
     def rerank(self, query: str, docs: List[Dict], top_k: int = 5) -> List[Dict]:
         if not docs:

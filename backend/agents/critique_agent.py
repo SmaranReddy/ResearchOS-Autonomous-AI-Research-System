@@ -54,7 +54,8 @@ class CritiqueAgent:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             raise ValueError("❌ Missing GROQ_API_KEY in .env file")
-        self.client = Groq(api_key=api_key)
+        # 12 s timeout — refinement call sends a long prompt but must not block pipeline
+        self.client = Groq(api_key=api_key, timeout=12.0)
         self.model = "llama-3.1-8b-instant"
         print("✅ CritiqueAgent ready.")
 
@@ -64,8 +65,8 @@ class CritiqueAgent:
 
     def critique(self, answer: str, context: List[str], query: str = "") -> str:
         context_text = "\n\n".join(context)
-        if len(context_text) > 8000:
-            context_text = context_text[:8000]
+        if len(context_text) > 4000:
+            context_text = context_text[:4000]  # reduced from 8000 — cuts prompt tokens by ~half
 
         prompt = f"""You are a strict academic editor. Refine the answer below — do NOT rewrite it from scratch.
 
@@ -117,7 +118,7 @@ Return ONLY the refined answer. No commentary, no preamble.
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.1,
-                max_tokens=1000,
+                max_tokens=600,  # reduced from 1000 — refinement doesn't need full token budget
             )
             refined = response.choices[0].message.content.strip()
 

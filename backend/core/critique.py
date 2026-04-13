@@ -90,7 +90,8 @@ def critique_answer(
 
     try:
         api_key = os.getenv("GROQ_API_KEY")
-        client = Groq(api_key=api_key)
+        # 8 s timeout — scoring uses max_tokens=100, completes in <2 s normally
+        client = Groq(api_key=api_key, timeout=8.0)
         response = client.chat.completions.create(
             model=_MODEL,
             messages=[{"role": "user", "content": prompt}],

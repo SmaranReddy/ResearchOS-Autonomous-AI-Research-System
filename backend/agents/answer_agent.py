@@ -6,8 +6,12 @@ from groq import Groq, AsyncGroq
 from dotenv import load_dotenv
 
 _PRIMARY_MODEL  = "llama-3.1-8b-instant"
-_FALLBACK_MODEL = "llama3-70b-8192"   # larger model as backstop
-_RETRY_DELAY    = 1.0                  # seconds between retries
+_FALLBACK_MODEL = "llama-3.1-8b-instant"  # same fast model — 70B is too slow for latency budget
+_RETRY_DELAY    = 0.3                      # reduced from 1.0s — less blocking between attempts
+
+# Per-call timeout budget.  Groq 8B generates ~1000 tokens in 2–5 s normally;
+# 15 s is generous without allowing indefinite blocking.
+_LLM_TIMEOUT_S  = 15.0
 
 
 class AnswerAgent:
@@ -22,7 +26,8 @@ class AnswerAgent:
         if not api_key:
             raise ValueError("❌ Missing GROQ_API_KEY in .env file")
 
-        self.client = Groq(api_key=api_key)
+        # timeout= caps each HTTP request; prevents indefinite blocking on slow API
+        self.client = Groq(api_key=api_key, timeout=_LLM_TIMEOUT_S)
         self._api_key = api_key
         print("✅ AnswerAgent ready (Groq LLM).")
 
@@ -30,7 +35,8 @@ class AnswerAgent:
 
     def _call_with_retry(self, messages: list, temperature: float = 0.1, max_tokens: int = 1000) -> str:
         """
-        Try primary model twice (with a 1s delay), then fall back to the larger model once.
+        Try primary model twice (with a short delay), then fall back once.
+        Each attempt is capped by the client-level timeout (_LLM_TIMEOUT_S).
         Raises on all failures.
         """
         attempts = [
@@ -41,17 +47,21 @@ class AnswerAgent:
         last_exc: Exception | None = None
         for model, label in attempts:
             try:
+                _t0 = time.monotonic()
                 response = self.client.chat.completions.create(
                     model=model,
                     messages=messages,
                     temperature=temperature,
                     max_tokens=max_tokens,
                 )
+                _elapsed_ms = int((time.monotonic() - _t0) * 1000)
                 if label != "primary attempt 1":
-                    print(f"[LLM RETRY] succeeded on {label}")
+                    print(f"[LLM_RETRY] succeeded on {label} ({_elapsed_ms}ms)")
+                else:
+                    print(f"[LLM_CALL] {label} → {_elapsed_ms}ms  tokens={max_tokens}")
                 return response.choices[0].message.content.strip()
             except Exception as e:
-                print(f"⚠️ LLM call failed ({label}): {e}")
+                print(f"⚠️ LLM call failed ({label}): {type(e).__name__}: {e}")
                 last_exc = e
                 if model == _PRIMARY_MODEL:
                     time.sleep(_RETRY_DELAY)
@@ -248,7 +258,7 @@ Respond in this structure:
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.1,
-                max_tokens=1000,
+                max_tokens=700,  # reduced from 1000 — answers rarely need more; saves ~1s + tokens
             )
         except Exception as e:
             print(f"⚠️ AnswerAgent failed ({e})")
@@ -292,7 +302,7 @@ Respond in this structure:
             if weak_context
             else "You are a research assistant. Prioritise the provided context. Never fabricate specific claims not supported by it."
         )
-        async_client = AsyncGroq(api_key=self._api_key)
+        async_client = AsyncGroq(api_key=self._api_key, timeout=_LLM_TIMEOUT_S)
         try:
             stream = await async_client.chat.completions.create(
                 model="llama-3.1-8b-instant",

@@ -1,0 +1,31 @@
+.git
+.gitignore
+
+# Python bytecode / caches
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/*.egg-info
+
+# Secrets — injected at runtime via env_file, never baked into image
+.env
+
+# Docs / repo meta (not needed in image)
+*.md
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+
+# Frontend build artefacts and host-installed node_modules
+frontend-next/node_modules
+frontend-next/.next
+
+# Large runtime data dirs — not needed in the image
+backend/downloads/
+backend/logs/
+downloads/
+lib/
+batch-tests/
+paper_result.json
+retrieved_dump.json

@@ -1,0 +1,48 @@
+version: "3.9"
+
+# ── Development compose — code changes reflect instantly, no rebuilds needed ─
+#
+#   docker compose up --build
+#
+# Rebuild only when deps change (requirements.txt or package.json).
+
+services:
+
+  # ── FastAPI backend ──────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .                      # root — so requirements.txt is reachable
+      dockerfile: backend/Dockerfile
+      target: dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app                # live-mount source; uvicorn --reload picks up changes instantly
+    env_file:
+      - .env                          # injects GROQ_API_KEY, PINECONE_API_KEY, TAVILY_API_KEY, etc.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s              # give uvicorn --reload time to finish startup
+    restart: unless-stopped
+
+  # ── Next.js frontend ─────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend-next
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend-next:/app          # live-mount source for HMR
+      - /app/node_modules             # anonymous volume — keeps container's node_modules intact
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000   # browser calls backend through mapped port
+      - WATCHPACK_POLLING=true                      # required for HMR on Windows/Docker Desktop
+    depends_on:
+      backend:
+        condition: service_healthy    # wait until /health returns 200 before starting frontend
+    restart: unless-stopped

@@ -22,6 +22,45 @@ from agents.critique_agent import CritiqueAgent
 
 
 # ---------------------------------------------------------------------------
+# Latency budget constants
+# ---------------------------------------------------------------------------
+
+# Hard cap: if the pipeline exceeds this wall-clock time before Phase 3d,
+# skip CritiqueAgent refinement and return the best answer available.
+MAX_TOTAL_TIME = 15.0          # seconds
+
+# Skip Phase 3b critique-scoring AND Phase 3d refinement when context
+# confidence is already this high — answer quality is sufficient.
+# NOTE: this threshold is compared against the RAW LLM confidence score
+# (output of get_context_confidence, typically 0.55–0.80 for good context),
+# NOT the composite score shown in API responses (which includes rerank signal).
+# 0.65 corresponds to composite ~0.80+ in practice.
+_EARLY_EXIT_CONF = 0.65
+
+# Rerank median threshold for skipping the Phase 2c LLM confidence call.
+# The reranker already scores docs 0–10 for semantic relevance.
+# A median >= 5.0 with 3+ docs reliably indicates sufficient context.
+_RERANK_CONF_SKIP_THRESHOLD = 5.0
+
+# ---------------------------------------------------------------------------
+# Feature flags
+# ---------------------------------------------------------------------------
+
+# When True: Phase 3b (critique scoring) always runs, enabling the self-critique
+# retry loop (Phase 3c) regardless of the early-exit confidence threshold.
+# When False: Phase 3b is skipped for high-confidence answers (_EARLY_EXIT_CONF),
+# saving ~2 LLM calls per query but disabling retry entirely.
+# Trade-off: True = better answer quality on uncertain queries, +2–6 s latency.
+#            False = fastest path, retry never fires.
+RETRY_ENABLED: bool = True
+
+
+def _ts() -> str:
+    """Current wall-clock timestamp for structured log tags."""
+    return time.strftime('%H:%M:%S')
+
+
+# ---------------------------------------------------------------------------
 # Background ingestion — non-blocking
 # ---------------------------------------------------------------------------
 
@@ -295,10 +334,12 @@ def _is_relevance_low(ranked_docs: list) -> bool:
 
 
 def _run_step(state: State, step: str) -> State:
-    print(f"\n[STEP] {step}")
+    _tag = step.upper()
+    print(f"\n[{_tag}_START] {_ts()}")
     t0 = time.monotonic()
     state = STEP_REGISTRY[step](state)
     elapsed_ms = int((time.monotonic() - t0) * 1000)
+    print(f"[{_tag}_TIME] {elapsed_ms}ms")
 
     # Accumulate timing for observable stages
     key = _TIMED_STEPS.get(step)
@@ -311,11 +352,9 @@ def _run_step(state: State, step: str) -> State:
         total = sum(len(p.get("chunks", [])) for p in state.papers)
         print(f"[STEP] chunk → {total} total chunks")
     elif step == "retrieve":
-        print(f"[STEP] retrieve → {len(state.raw_docs)} docs retrieved ({elapsed_ms}ms)")
+        print(f"[STEP] retrieve → {len(state.raw_docs)} docs retrieved")
     elif step == "rerank":
-        print(f"[STEP] rerank → top {len(state.ranked_docs)} docs ({elapsed_ms}ms)")
-    elif step in ("answer", "critique"):
-        print(f"[STEP] {step} done ({elapsed_ms}ms)")
+        print(f"[STEP] rerank → top {len(state.ranked_docs)} docs")
     return state
 
 
@@ -482,8 +521,6 @@ def run_pipeline_to_context(
             seen.add(title)
             state.sources.append({"title": title, "url": url})
 
-    print(f"[RETRIEVE_TIME] {state.latency_ms['retrieve_ms']}ms")
-    print(f"[RERANK_TIME]   {state.latency_ms['rerank_ms']}ms")
     return state
 
 
@@ -492,32 +529,60 @@ def run_pipeline_to_context(
 # ---------------------------------------------------------------------------
 
 def run_pipeline(
-    query: str, num_papers: int = 3, chat_history: list = None
+    query: str, num_papers: int = 3, chat_history: list = None, disable_retry: bool = False
 ) -> tuple[str, float, list, list, dict, str, dict]:
     """
     Returns (answer, confidence, updated_chat_history, sources, latency_ms, status).
     Pass chat_history from the previous call to enable conversational memory.
     """
     _t_pipeline_start = time.monotonic()
+    print(f"\n[TOTAL_START] {_ts()}")
+
     # Phases 1–2: retrieval
     state = run_pipeline_to_context(query, num_papers, chat_history)
 
-    # Phase 2c: LLM-based confidence pre-check (only when ingestion hasn't run yet)
-    # If confidence is sufficient we cache it so generate_answer doesn't recompute it.
+    # Phase 2c: confidence pre-check — decide whether context needs fresh ingestion.
+    # Fast path: derive confidence from rerank scores without an extra LLM call.
+    # The reranker already scored every doc 0–10 for semantic relevance; a median
+    # >= _RERANK_CONF_SKIP_THRESHOLD with 3+ docs is a reliable proxy for sufficient
+    # context and eliminates one round-trip to the Groq API (~1–3 s saved per query).
     if not state.ingestion_done:
-        context_text = "\n\n".join(
-            doc.get("text", "") for doc in state.ranked_docs if isinstance(doc, dict)
-        )
-        agent = AnswerAgent()
-        _effective_query = state.resolved_query or state.user_query
-        confidence = agent.get_context_confidence(_effective_query, context_text)
-        state.confidence = confidence
-        print(f"[ANSWER CHECK] Phase 2c confidence: {confidence:.2f}")
+        print(f"\n[CONF_CHECK_START] {_ts()}")
+        _t2c = time.monotonic()
 
         _rerank_scores_2c = [d.get("rerank_score", 0.0) for d in state.ranked_docs if isinstance(d, dict)]
         _rerank_norm_2c   = sum(_rerank_scores_2c) / (10.0 * len(_rerank_scores_2c)) if _rerank_scores_2c else 0.0
         _ret_scores_2c    = [d.get("score", 0.0) for d in state.ranked_docs if d.get("score") is not None]
         _retrieval_norm_2c = sum(_ret_scores_2c) / len(_ret_scores_2c) if _ret_scores_2c else 0.0
+
+        # Median rerank score — more robust than mean against outliers
+        _rs_sorted  = sorted(_rerank_scores_2c, reverse=True)
+        _rerank_med = _rs_sorted[len(_rs_sorted) // 2] if _rs_sorted else 0.0
+        _good_context = (len(state.ranked_docs) >= 3 and _rerank_med >= _RERANK_CONF_SKIP_THRESHOLD)
+
+        if _good_context:
+            # Estimate confidence from rerank median (no LLM call needed).
+            # Formula maps median score [5, 10] → confidence [0.68, 0.90].
+            confidence = min(0.63 + _rerank_med * 0.027, 0.90)
+            state.confidence = confidence
+            state.confidence_cached = True
+            print(
+                f"[CONF_CHECK_TIME] 0ms  confidence={confidence:.2f}  "
+                f"(rerank-based, skipped LLM call — median={_rerank_med:.1f} docs={len(state.ranked_docs)})"
+            )
+        else:
+            # Context looks weak — use LLM to get an accurate confidence score
+            context_text = "\n\n".join(
+                doc.get("text", "") for doc in state.ranked_docs if isinstance(doc, dict)
+            )
+            agent = AnswerAgent()
+            _effective_query = state.resolved_query or state.user_query
+            confidence = agent.get_context_confidence(_effective_query, context_text)
+            state.confidence = confidence
+            print(
+                f"[CONF_CHECK_TIME] {int((time.monotonic()-_t2c)*1000)}ms  "
+                f"confidence={confidence:.2f}  (LLM call — weak rerank median={_rerank_med:.1f})"
+            )
 
         _should_ingest, _reason, _strength = should_trigger_ingestion(
             n_docs=len(state.ranked_docs),
@@ -539,30 +604,78 @@ def run_pipeline(
             state.confidence_cached = False
             state.decision_trace["action"] = REASON_TO_ACTION[_reason]
         else:
-            # valid for current ranked_docs — reuse in generate_answer (no duplicate call)
+            # confidence_cached already set in fast path; set here for the slow path too
             state.confidence_cached = True
 
     # Phase 3a: generate answer
     state = _run_step(state, "answer")
 
-    # Phase 3b: self-critique score (1 LLM call — small model, max_tokens=80)
-    if not state.is_fallback:
+    # Phase 3b: self-critique score (1 LLM call — small model, max_tokens=100)
+    # Early-exit: skip Phase 3b (and 3d) when confidence is already high.
+    # If confidence >= _EARLY_EXIT_CONF the context is already sufficient;
+    # the critique score would not change the retry decision (retry requires
+    # score < 0.7, but high-confidence answers almost never get scored that low).
+    # Saving this call reduces from 4→3 Groq calls for the common case, which
+    # keeps bulk evaluation within the 30 RPM free-tier limit.
+    # Retry still fires for low-confidence queries (confidence < _EARLY_EXIT_CONF).
+    _skip_3b = (
+        not state.is_fallback
+        and state.confidence >= _EARLY_EXIT_CONF
+    )
+    if _skip_3b:
+        print(
+            f"[CRITIQUE_SCORE] Phase 3b skipped — high confidence "
+            f"({state.confidence:.2f} >= {_EARLY_EXIT_CONF})"
+        )
+        state._critique_score  = 1.0
+        state._critique_type   = "good"
+        state._critique_reason = "early-exit: high confidence"
+    elif not state.is_fallback:
         _context_texts = [
             doc.get("text", "") for doc in state.ranked_docs if isinstance(doc, dict)
         ]
+        print(f"\n[CRITIQUE_SCORE_START] {_ts()}")
+        _t3b = time.monotonic()
         state._critique_score, state._critique_reason, state._critique_type = critique_answer(
             state.user_query, state.final_answer, _context_texts
         )
+        print(f"[CRITIQUE_SCORE_TIME] {int((time.monotonic()-_t3b)*1000)}ms  score={state._critique_score:.2f}")
 
-        # Phase 3c: conditional retry — only on borderline decisions with low scores
-        # "weak" decision_strength means signals were ambiguous (borderline case).
+        # [RETRY_DEBUG] — log all gate variables before the retry condition
+        # NOTE: _decision_strength is intentionally NOT part of the gate.
+        # It reflects retrieval uncertainty, not answer quality. For well-indexed
+        # queries strength is always "strong", which would permanently block retry.
+        # The critique score is the correct signal for whether the answer needs improvement.
+        _gate_open = (
+            RETRY_ENABLED
+            and not disable_retry
+            and state._critique_score < 0.7
+            and not state._retried
+        )
+        print(
+            f"[RETRY_DEBUG] RETRY_ENABLED={RETRY_ENABLED}  disable_retry={disable_retry}  "
+            f"decision_strength={state._decision_strength!r}  "
+            f"critique_score={state._critique_score:.2f}  "
+            f"critique_type={state._critique_type!r}  "
+            f"retried={state._retried}  gate_open={_gate_open}"
+        )
+
+        # Phase 3c: conditional retry — fires when answer quality is poor (score < 0.7).
+        # Gated by RETRY_ENABLED (module flag) and disable_retry (per-request override).
         # A single retry is allowed; _retried prevents infinite loops.
         if (
-            state._decision_strength == "weak"
-            and state._critique_score < 0.6
+            RETRY_ENABLED
+            and not disable_retry
+            and state._critique_score < 0.7
             and not state._retried
         ):
             _RETRY_DELTA = 0.05   # minimum improvement required to accept retry
+
+            print(
+                f"\n[RETRY_START] {_ts()}  reason={state._critique_type!r}  "
+                f"strength={state._decision_strength!r}  score={state._critique_score:.2f}"
+            )
+            _t_retry = time.monotonic()
 
             # Snapshot original answer and score before overwriting
             _original_answer = state.final_answer
@@ -571,6 +684,8 @@ def run_pipeline(
             _original_type   = state._critique_type
 
             state = _retry_with_expanded_context(state)
+
+            print(f"[RETRY_TIME] {int((time.monotonic()-_t_retry)*1000)}ms")
 
             # Re-score after retry so the stored score reflects the final answer
             _context_texts = [
@@ -596,8 +711,28 @@ def run_pipeline(
                 state._critique_reason = _original_reason
                 state._critique_type   = _original_type
 
-    # Phase 3d: refine answer (existing CritiqueAgent) + append to chat_history
-    state = _run_step(state, "critique")
+    # Phase 3d: CritiqueAgent refinement — skip if time budget exhausted or high confidence
+    _elapsed_before_3d = time.monotonic() - _t_pipeline_start
+    _skip_3d_budget     = _elapsed_before_3d >= MAX_TOTAL_TIME - 2.0
+    _skip_3d_confidence = state.confidence >= _EARLY_EXIT_CONF
+
+    if _skip_3d_budget:
+        print(
+            f"[CRITIQUE] Phase 3d skipped — time budget "
+            f"({_elapsed_before_3d:.1f}s / {MAX_TOTAL_TIME}s max)"
+        )
+        # Still append to history so conversational memory works
+        state.chat_history.append({"query": state.user_query, "answer": state.final_answer})
+        state.chat_history = state.chat_history[-3:]
+    elif _skip_3d_confidence:
+        print(
+            f"[CRITIQUE] Phase 3d skipped — high confidence "
+            f"({state.confidence:.2f} >= {_EARLY_EXIT_CONF})"
+        )
+        state.chat_history.append({"query": state.user_query, "answer": state.final_answer})
+        state.chat_history = state.chat_history[-3:]
+    else:
+        state = _run_step(state, "critique")
 
     # Composite confidence — replaces the single-signal LLM score with a
     # weighted combination of retrieval similarity, rerank quality, and LLM score.
@@ -626,4 +761,5 @@ def run_pipeline(
         state.latency_ms,
         state.status,
         state.decision_trace,
+        state._retried,
     )
