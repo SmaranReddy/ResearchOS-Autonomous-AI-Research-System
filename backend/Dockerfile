@@ -17,9 +17,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8000
 
-# ── Dev: source is volume-mounted at runtime; uvicorn --reload watches files ─
+# ── Dev: source is volume-mounted at runtime ────────────────────────────────
+# --reload removed: unstable on Windows + Docker Desktop volume mounts
+# (inotify events are unreliable via virtioFS/WSL2, causing uvicorn to exit on startup)
 FROM base AS dev
-CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # ── Prod: bake source into image; 2 workers, no reload ──────────────────────
 # Worker count: 2 is a safe default for a memory-constrained container.

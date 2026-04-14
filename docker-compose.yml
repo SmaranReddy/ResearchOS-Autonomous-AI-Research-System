@@ -22,27 +22,31 @@ services:
       - .env                          # injects GROQ_API_KEY, PINECONE_API_KEY, TAVILY_API_KEY, etc.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
+      interval: 15s
       timeout: 5s
-      retries: 3
-      start_period: 15s              # give uvicorn --reload time to finish startup
+      retries: 5
+      start_period: 120s             # SentenceTransformer model downloads on first run (~1-2 min)
     restart: unless-stopped
 
   # ── Next.js frontend ─────────────────────────────────────────────────────
+  # Access the app at: http://localhost:3000  (NOT http://0.0.0.0:3000)
+  # 0.0.0.0 is a bind address shown in Next.js logs — it is not a valid browser URL.
   frontend:
     build:
       context: ./frontend-next
       dockerfile: Dockerfile
       target: dev
+    # --hostname 0.0.0.0 makes Next.js bind on all interfaces so Docker port
+    # mapping works. Without it, the dev server only listens on 127.0.0.1
+    # inside the container and localhost:3000 on the host times out.
+    command: npx next dev --hostname 0.0.0.0
     ports:
       - "3000:3000"
     volumes:
       - ./frontend-next:/app          # live-mount source for HMR
       - /app/node_modules             # anonymous volume — keeps container's node_modules intact
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000   # browser calls backend through mapped port
-      - WATCHPACK_POLLING=true                      # required for HMR on Windows/Docker Desktop
+      - WATCHPACK_POLLING=true        # required for HMR on Windows/Docker Desktop
     depends_on:
-      backend:
-        condition: service_healthy    # wait until /health returns 200 before starting frontend
+      - backend                       # wait for backend container to start (not for health check to pass)
     restart: unless-stopped
