@@ -16,7 +16,7 @@ from ingestion.embeddings import Embedder
 from ingestion.indexing import Indexer
 from retrieval.query_transform import QueryTransformer
 from retrieval.retriever import RetrieverAgent, get_retriever
-from retrieval.reranker import Reranker
+from retrieval.reranker import Reranker, get_reranker
 from agents.answer_agent import AnswerAgent
 from agents.critique_agent import CritiqueAgent
 
@@ -237,7 +237,9 @@ def _step_rerank(state: State) -> State:
     # Use the resolved (standalone) query so reranking is context-aware,
     # e.g. "compare it to pure transformer" → "Compare BERT and GPT to pure Transformer"
     rerank_query = state.resolved_query or state.user_query
-    state.ranked_docs = Reranker().rerank(rerank_query, state.raw_docs)
+    # get_reranker() returns the module-level singleton — reuses the Groq
+    # httpx connection pool instead of discarding it on every call.
+    state.ranked_docs = get_reranker().rerank(rerank_query, state.raw_docs)
     return state
 
 

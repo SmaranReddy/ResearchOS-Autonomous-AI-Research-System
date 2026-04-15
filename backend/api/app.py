@@ -30,6 +30,14 @@ from retrieval.retriever import get_retriever
 # critique pass and emits a "refine" SSE event to replace the displayed answer.
 _STREAM_CRITIQUE_THRESHOLD = 0.40
 
+# ---------------------------------------------------------------------------
+# Cold-start detection
+# Set once when the process boots; compared on every /health call to surface
+# restarts in logs and monitoring dashboards.
+# ---------------------------------------------------------------------------
+_BOOT_TIME: float = time.monotonic()
+_BOOT_WALL: str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
 app = FastAPI(title="re-search API")
 
 
@@ -45,6 +53,58 @@ async def _validate_env():
             print(f"[WARN] Missing env var {var!r} — {consequence}")
 
 
+@app.on_event("startup")
+async def _warmup():
+    """
+    Pre-warm all expensive resources so the first user request does NOT pay
+    cold-start costs.
+
+    What this eliminates:
+      1. fastembed ONNX model load (1–5 s) — triggered by get_embedding_model()
+      2. ONNX JIT kernel compilation (200–500 ms) — triggered by dummy embed call
+      3. Pinecone client init + list_indexes() network call (100–300 ms)
+      4. Pinecone TCP/TLS connection establishment (200–500 ms on Render)
+
+    Each step is wrapped in try/except so a Pinecone outage at deploy time
+    does not prevent the service from starting.
+    """
+    print("[WARMUP] Starting pre-warm sequence...")
+
+    # ── Step 1: Load embedding model + trigger ONNX JIT via dummy inference ──
+    # get_embedding_model() is a singleton — safe to call multiple times.
+    # The dummy embed call after it forces the ONNX runtime to JIT-compile
+    # the inference graph, eliminating the first-query compilation stall.
+    try:
+        from utils.model import get_embedding_model
+        model = await asyncio.to_thread(get_embedding_model)
+        # list() fully consumes the generator, flushing the ONNX warmup pass
+        await asyncio.to_thread(lambda: list(model.embed(["warmup"])))
+        print("[WARMUP] Embedding model ready")
+    except Exception as exc:
+        print(f"[WARMUP] Embedding model warmup failed (non-fatal): {exc}")
+
+    # ── Step 2: Init Pinecone singleton + open TCP/TLS connection ─────────────
+    # get_retriever() builds the RetrieverAgent singleton (creates Pinecone
+    # client, checks index existence).  The dummy query after it opens the
+    # TCP connection so the first real query doesn't pay the handshake cost.
+    try:
+        retriever = await asyncio.to_thread(get_retriever)
+        dummy_vec = await asyncio.to_thread(retriever.embed_query, "warmup")
+        await asyncio.to_thread(
+            retriever.index.query,
+            namespace="default",
+            vector=dummy_vec,
+            top_k=1,
+            include_metadata=False,
+        )
+        print("[WARMUP] Pinecone connection warmed")
+    except Exception as exc:
+        print(f"[WARMUP] Pinecone warmup failed (non-fatal): {exc}")
+
+    print("[WARMUP] Done — service is warm and ready")
+    print(f"[COLD_START] Process booted at {_BOOT_WALL} — all resources pre-warmed")
+
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -55,12 +115,24 @@ app.add_middleware(
 
 
 # ---------------------------------------------------------------------------
-# GET /health — lightweight liveness probe used by Docker healthcheck
+# GET /health — lightweight liveness + readiness probe
+#
+# Used by:
+#   • Render's built-in health checks
+#   • UptimeRobot / Better Uptime keep-alive pings (every 5 min)
+#   • Docker HEALTHCHECK
+#
+# Contract: MUST return 200 in < 100 ms. Zero heavy logic here.
 # ---------------------------------------------------------------------------
 
 @app.get("/health", include_in_schema=False)
 def health():
-    return {"status": "ok"}
+    uptime_s = int(time.monotonic() - _BOOT_TIME)
+    return {
+        "status": "ok",
+        "uptime_seconds": uptime_s,
+        "booted_at": _BOOT_WALL,
+    }
 
 
 # ---------------------------------------------------------------------------

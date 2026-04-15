@@ -82,3 +82,19 @@ class Reranker:
         print(f"[Reranker] Selected top {top_k} out of {len(candidates)} candidates "
               f"({len(docs)} total). Scores: {[round(d['rerank_score'], 1) for d in ranked]}")
         return ranked[:top_k]
+
+
+# ---------------------------------------------------------------------------
+# Module-level singleton — avoids recreating the Groq httpx connection pool
+# on every pipeline call (_step_rerank used to instantiate Reranker() fresh
+# each request, discarding the underlying connection pool each time).
+# ---------------------------------------------------------------------------
+
+_reranker_instance: "Reranker | None" = None
+
+
+def get_reranker() -> "Reranker":
+    global _reranker_instance
+    if _reranker_instance is None:
+        _reranker_instance = Reranker()
+    return _reranker_instance
