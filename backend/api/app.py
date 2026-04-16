@@ -22,9 +22,10 @@ from core.confidence import compute_composite, derive_status, LOW_CONFIDENCE_THR
 from core.rate_limiter import rate_limit
 from core.logger import log_request
 from core.critique import critique_answer
-from agents.answer_agent import AnswerAgent
-from agents.critique_agent import CritiqueAgent
+from agents.answer_agent import AnswerAgent, get_answer_agent
+from agents.critique_agent import CritiqueAgent, get_critique_agent
 from retrieval.retriever import get_retriever
+from retrieval.query_transform import get_query_transformer
 
 # Confidence threshold below which the streaming path runs a post-answer
 # critique pass and emits a "refine" SSE event to replace the displayed answer.
@@ -100,6 +101,29 @@ async def _warmup():
         print("[WARMUP] Pinecone connection warmed")
     except Exception as exc:
         print(f"[WARMUP] Pinecone warmup failed (non-fatal): {exc}")
+
+    # ── Step 3: Init all Groq client singletons + warm the TCP/TLS connection ──
+    # QueryTransformer, AnswerAgent, CritiqueAgent each hold a Groq httpx client.
+    # Without this, the first pipeline call pays TCP+TLS handshake to api.groq.com
+    # (~300-500ms extra).  A single 1-token dummy call through any one of the clients
+    # establishes and pools the connection; all three share the same Groq endpoint so
+    # the OS-level TCP connection is reused across them.
+    try:
+        qt = await asyncio.to_thread(get_query_transformer)
+        await asyncio.to_thread(get_answer_agent)    # init sync+async Groq clients
+        await asyncio.to_thread(get_critique_agent)  # init Groq client
+        # Fire a 1-token request to open the TCP/TLS connection to api.groq.com
+        await asyncio.to_thread(
+            lambda: qt.client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": "hi"}],
+                max_tokens=1,
+                temperature=0.0,
+            )
+        )
+        print("[WARMUP] Groq connection warmed")
+    except Exception as exc:
+        print(f"[WARMUP] Groq warmup failed (non-fatal): {exc}")
 
     print("[WARMUP] Done — service is warm and ready")
     print(f"[COLD_START] Process booted at {_BOOT_WALL} — all resources pre-warmed")
@@ -342,7 +366,7 @@ async def stream_query(request: Request, body: QueryRequest):
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
             return
 
-        agent = AnswerAgent()
+        agent = get_answer_agent()
         full_answer_parts: list[str] = []
 
         # Use the resolved (pronoun-expanded) query for confidence scoring and prompting.
@@ -399,7 +423,7 @@ async def stream_query(request: Request, body: QueryRequest):
                 else:
                     # Answer is incomplete or incorrect — use CritiqueAgent to tighten it
                     _refined = await asyncio.to_thread(
-                        CritiqueAgent().critique,
+                        get_critique_agent().critique,
                         state.final_answer,
                         _ctx_texts,
                         body.query,

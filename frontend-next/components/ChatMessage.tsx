@@ -398,9 +398,10 @@ function AssistantMessage({ message }: { message: Message }) {
           <LatencyRow latency={message.latency} />
         )}
 
-        {process.env.NODE_ENV === "development" && isDone && !showDebug && typeof message.latencyMs === "number" && (
-          <p className="mt-0.5 ml-1 text-xs text-slate-700">
-            Total: {(message.latencyMs / 1000).toFixed(1)}s
+        {/* Generation time — always visible */}
+        {isDone && typeof message.latencyMs === "number" && (
+          <p className="mt-1 ml-1 text-xs text-slate-600">
+            Generated in {(message.latencyMs / 1000).toFixed(1)}s
           </p>
         )}
       </div>

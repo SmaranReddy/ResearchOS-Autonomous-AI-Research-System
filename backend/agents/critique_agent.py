@@ -229,3 +229,18 @@ Return ONLY the refined answer. No commentary, no preamble.
             print(f"[CRITIQUE] removed irrelevant content based on query scope ({removed_count} line(s) filtered)")
 
         return result
+
+
+# ---------------------------------------------------------------------------
+# Module-level singleton — avoids recreating the Groq httpx connection pool
+# on every critique call.
+# ---------------------------------------------------------------------------
+
+_critique_agent_instance: "CritiqueAgent | None" = None
+
+
+def get_critique_agent() -> "CritiqueAgent":
+    global _critique_agent_instance
+    if _critique_agent_instance is None:
+        _critique_agent_instance = CritiqueAgent()
+    return _critique_agent_instance

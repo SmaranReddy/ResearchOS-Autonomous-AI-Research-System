@@ -28,6 +28,10 @@ class AnswerAgent:
 
         # timeout= caps each HTTP request; prevents indefinite blocking on slow API
         self.client = Groq(api_key=api_key, timeout=_LLM_TIMEOUT_S)
+        # Pre-create the async client once — reused across all stream_answer calls.
+        # Creating AsyncGroq fresh per-request discards the httpx connection pool,
+        # forcing a new TCP/TLS handshake to api.groq.com on every stream request.
+        self.async_client = AsyncGroq(api_key=api_key, timeout=_LLM_TIMEOUT_S)
         self._api_key = api_key
         print("✅ AnswerAgent ready (Groq LLM).")
 
@@ -302,9 +306,8 @@ Respond in this structure:
             if weak_context
             else "You are a research assistant. Prioritise the provided context. Never fabricate specific claims not supported by it."
         )
-        async_client = AsyncGroq(api_key=self._api_key, timeout=_LLM_TIMEOUT_S)
         try:
-            stream = await async_client.chat.completions.create(
+            stream = await self.async_client.chat.completions.create(
                 model="llama-3.1-8b-instant",
                 messages=[
                     {"role": "system", "content": system_msg},
@@ -321,3 +324,19 @@ Respond in this structure:
         except Exception as e:
             print(f"⚠️ stream_answer failed: {e}")
             yield "\n\n[Error: failed to stream response]"
+
+
+# ---------------------------------------------------------------------------
+# Module-level singleton — one Groq sync client + one AsyncGroq client,
+# shared across all requests.  Eliminates per-request httpx pool recreation
+# and the TCP/TLS handshake cost that comes with it.
+# ---------------------------------------------------------------------------
+
+_answer_agent_instance: "AnswerAgent | None" = None
+
+
+def get_answer_agent() -> "AnswerAgent":
+    global _answer_agent_instance
+    if _answer_agent_instance is None:
+        _answer_agent_instance = AnswerAgent()
+    return _answer_agent_instance

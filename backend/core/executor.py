@@ -14,11 +14,11 @@ from ingestion.preprocessing import Preprocessor
 from ingestion.chunking import Chunker
 from ingestion.embeddings import Embedder
 from ingestion.indexing import Indexer
-from retrieval.query_transform import QueryTransformer
+from retrieval.query_transform import QueryTransformer, get_query_transformer
 from retrieval.retriever import RetrieverAgent, get_retriever
 from retrieval.reranker import Reranker, get_reranker
-from agents.answer_agent import AnswerAgent
-from agents.critique_agent import CritiqueAgent
+from agents.answer_agent import AnswerAgent, get_answer_agent
+from agents.critique_agent import CritiqueAgent, get_critique_agent
 
 
 # ---------------------------------------------------------------------------
@@ -183,7 +183,7 @@ def _step_index(state: State) -> State:
 
 def _step_query_transform(state: State) -> State:
     print("[query_transform] generating multi-query variations")
-    state.rewritten_queries = QueryTransformer().transform(
+    state.rewritten_queries = get_query_transformer().transform(
         state.user_query,
         chat_history=state.chat_history if state.chat_history else None,
     )
@@ -249,7 +249,7 @@ def _step_answer(state: State) -> State:
     # This ensures "compare it to pure transformer" → "Compare BERT and GPT to pure Transformer"
     # so the LLM and confidence gate operate on an unambiguous question.
     effective_query = state.resolved_query or state.user_query
-    state.final_answer = AnswerAgent().generate_answer(
+    state.final_answer = get_answer_agent().generate_answer(
         effective_query, state.ranked_docs, chat_history=state.chat_history, state=state
     )
     return state
@@ -261,7 +261,7 @@ def _step_critique(state: State) -> State:
     else:
         print("[CRITIQUE] refining answer")
         context = [doc.get("text", "") for doc in state.ranked_docs if isinstance(doc, dict)]
-        state.final_answer = CritiqueAgent().critique(state.final_answer, context, query=state.user_query)
+        state.final_answer = get_critique_agent().critique(state.final_answer, context, query=state.user_query)
     # append to history and keep only last 3
     state.chat_history.append({"query": state.user_query, "answer": state.final_answer})
     state.chat_history = state.chat_history[-3:]
@@ -288,10 +288,11 @@ STEP_REGISTRY = {
 
 # Steps whose wall-clock time is tracked in state.latency_ms
 _TIMED_STEPS = {
-    "retrieve": "retrieve_ms",
-    "rerank":   "rerank_ms",
-    "answer":   "llm_ms",
-    "critique": "llm_ms",
+    "query_transform": "transform_ms",
+    "retrieve":        "retrieve_ms",
+    "rerank":          "rerank_ms",
+    "answer":          "llm_ms",
+    "critique":        "llm_ms",
 }
 
 
@@ -407,7 +408,7 @@ def _retry_with_expanded_context(state: State) -> State:
         state = _run_step(state, "retrieve")
         # Rerank with a smaller top_k to keep only the most precise docs
         rerank_query = state.resolved_query or state.user_query
-        state.ranked_docs = Reranker().rerank(rerank_query, state.raw_docs, top_k=3)
+        state.ranked_docs = get_reranker().rerank(rerank_query, state.raw_docs, top_k=3)
         print(f"[RETRY] tight rerank → {len(state.ranked_docs)} docs (top_k=3)")
 
     elif critique_type == "not_grounded":
@@ -471,9 +472,10 @@ def run_pipeline_to_context(
     _t_retrieve = time.monotonic()
 
     retriever = get_retriever()
+    _t_transform = time.monotonic()
     with ThreadPoolExecutor(max_workers=2) as _pool:
         _transform_fut = _pool.submit(
-            QueryTransformer().transform,
+            get_query_transformer().transform,
             state.user_query,
             state.chat_history if state.chat_history else None,
         )
@@ -482,9 +484,11 @@ def run_pipeline_to_context(
 
         try:
             _rewritten = _transform_fut.result(timeout=6.0)
+            state.latency_ms["transform_ms"] = int((time.monotonic() - _t_transform) * 1000)
         except Exception as _e:
             print(f"[WARN] query_transform failed ({_e}) — using original query")
             _rewritten = [state.user_query]
+            state.latency_ms["transform_ms"] = int((time.monotonic() - _t_transform) * 1000)
 
         try:
             _probe_docs = _probe_fut.result(timeout=_RETRIEVAL_TIMEOUT_S)
@@ -633,9 +637,8 @@ def run_pipeline(
             context_text = "\n\n".join(
                 doc.get("text", "") for doc in state.ranked_docs if isinstance(doc, dict)
             )
-            agent = AnswerAgent()
             _effective_query = state.resolved_query or state.user_query
-            confidence = agent.get_context_confidence(_effective_query, context_text)
+            confidence = get_answer_agent().get_context_confidence(_effective_query, context_text)
             state.confidence = confidence
             print(
                 f"[CONF_CHECK_TIME] {int((time.monotonic()-_t2c)*1000)}ms  "
@@ -816,10 +819,14 @@ def run_pipeline(
         else:
             state.decision_trace["action"] = "used_existing_knowledge"
     state.latency_ms["total_ms"] = int((time.monotonic() - _t_pipeline_start) * 1000)
-    print(f"[RETRIEVE_TIME] {state.latency_ms['retrieve_ms']}ms")
-    print(f"[RERANK_TIME]   {state.latency_ms['rerank_ms']}ms")
-    print(f"[LLM_TIME]      {state.latency_ms['llm_ms']}ms")
-    print(f"[TOTAL_TIME]    {state.latency_ms['total_ms']}ms")
+    print(
+        f"\n[LATENCY_BREAKDOWN]"
+        f"  TRANSFORM={state.latency_ms.get('transform_ms', 0)}ms"
+        f"  RETRIEVE={state.latency_ms.get('retrieve_ms', 0)}ms"
+        f"  RERANK={state.latency_ms.get('rerank_ms', 0)}ms"
+        f"  LLM={state.latency_ms.get('llm_ms', 0)}ms"
+        f"  TOTAL={state.latency_ms.get('total_ms', 0)}ms"
+    )
     print(f"[PIPELINE] status={state.status}  confidence={state.confidence:.3f}")
 
     return (

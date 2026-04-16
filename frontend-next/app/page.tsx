@@ -16,7 +16,10 @@ function EmptyState() {
         Ask any research question. I&apos;ll retrieve relevant papers, rank the
         evidence, and synthesise a grounded answer.
       </p>
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md">
+      <p className="mt-6 text-xs text-slate-600 max-w-xs">
+        ⚡ First query may take a few extra seconds to warm up — subsequent queries are faster.
+      </p>
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md">
         {[
           "Explain transformers in deep learning",
           "Compare BERT and GPT architectures",

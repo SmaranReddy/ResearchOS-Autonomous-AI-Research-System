@@ -128,3 +128,19 @@ class QueryTransformer:
         queries = ([resolved] + variations)[:3]
         print(f"[MULTI-QUERY] {len(queries)} queries  (resolved + {len(variations)} variations, no HyDE)")
         return queries
+
+
+# ---------------------------------------------------------------------------
+# Module-level singleton — avoids recreating the Groq httpx connection pool
+# on every pipeline call.  QueryTransformer is called on every non-cached
+# request; creating a new Groq client each time discards the TCP connection.
+# ---------------------------------------------------------------------------
+
+_query_transformer_instance: "QueryTransformer | None" = None
+
+
+def get_query_transformer() -> "QueryTransformer":
+    global _query_transformer_instance
+    if _query_transformer_instance is None:
+        _query_transformer_instance = QueryTransformer()
+    return _query_transformer_instance
