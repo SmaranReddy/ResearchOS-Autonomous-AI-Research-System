@@ -1,0 +1,182 @@
+[
+  {
+    "id": 1,
+    "query": "What are transformers in deep learning?",
+    "type": "factual",
+    "expected_keywords": ["attention", "encoder", "decoder", "neural"]
+  },
+  {
+    "id": 2,
+    "query": "How does self-attention work in transformer models?",
+    "type": "factual",
+    "expected_keywords": ["query", "key", "value", "softmax"]
+  },
+  {
+    "id": 3,
+    "query": "What is BERT and how was it trained?",
+    "type": "factual",
+    "expected_keywords": ["bidirectional", "pre-training", "masked", "language"]
+  },
+  {
+    "id": 4,
+    "query": "What are the computational limitations of transformer models?",
+    "type": "factual",
+    "expected_keywords": ["quadratic", "sequence length", "memory", "attention"]
+  },
+  {
+    "id": 5,
+    "query": "How is the Vision Transformer different from CNNs?",
+    "type": "factual",
+    "expected_keywords": ["patch", "image", "convolutional", "classification"]
+  },
+  {
+    "id": 6,
+    "query": "What is retrieval-augmented generation?",
+    "type": "factual",
+    "expected_keywords": ["retrieval", "generation", "knowledge", "vector"]
+  },
+  {
+    "id": 7,
+    "query": "What is the role of positional encoding in transformers?",
+    "type": "factual",
+    "expected_keywords": ["position", "sequence", "order", "sinusoidal"]
+  },
+  {
+    "id": 8,
+    "query": "How do graph neural networks work?",
+    "type": "factual",
+    "expected_keywords": ["graph", "node", "edge", "aggregation"]
+  },
+  {
+    "id": 9,
+    "query": "What are diffusion models in generative AI?",
+    "type": "factual",
+    "expected_keywords": ["noise", "denoising", "generation", "diffusion"]
+  },
+  {
+    "id": 10,
+    "query": "What is the transformer architecture used for in NLP?",
+    "type": "factual",
+    "expected_keywords": ["language", "attention", "pre-training", "fine-tuning"]
+  },
+  {
+    "id": 11,
+    "query": "Tell me about recent advances in AI",
+    "type": "vague",
+    "expected_keywords": ["language model", "neural", "learning", "model"]
+  },
+  {
+    "id": 12,
+    "query": "How can machine learning help with science?",
+    "type": "vague",
+    "expected_keywords": ["prediction", "data", "pattern", "model"]
+  },
+  {
+    "id": 13,
+    "query": "What makes a good language model?",
+    "type": "vague",
+    "expected_keywords": ["training", "data", "parameters", "performance"]
+  },
+  {
+    "id": 14,
+    "query": "Explain neural networks to a beginner",
+    "type": "vague",
+    "expected_keywords": ["layer", "neuron", "weights", "activation"]
+  },
+  {
+    "id": 15,
+    "query": "What are the main challenges in modern AI?",
+    "type": "vague",
+    "expected_keywords": ["bias", "hallucination", "alignment", "safety"]
+  },
+  {
+    "id": 16,
+    "query": "How do I make my machine learning model better?",
+    "type": "vague",
+    "expected_keywords": ["training", "data", "regularization", "optimization"]
+  },
+  {
+    "id": 17,
+    "query": "What is attention in machine learning?",
+    "type": "vague",
+    "expected_keywords": ["attention", "mechanism", "weight", "transformer"]
+  },
+  {
+    "id": 18,
+    "query": "Why are larger models not always better and what techniques mitigate overfitting at scale?",
+    "type": "vague",
+    "expected_keywords": ["overfitting", "regularization", "generalization", "scale"]
+  },
+  {
+    "id": 19,
+    "query": "What is the connection between self-supervised learning and generative models in NLP?",
+    "type": "vague",
+    "expected_keywords": ["self-supervised", "generative", "pre-training", "representation"]
+  },
+  {
+    "id": 20,
+    "query": "How do different attention variants like sparse and linear attention compare to full self-attention?",
+    "type": "vague",
+    "expected_keywords": ["sparse", "linear", "attention", "complexity", "approximation"]
+  },
+  {
+    "id": 21,
+    "query": "How does BERT pre-training transfer to downstream tasks and what fine-tuning strategies work best?",
+    "type": "multi_hop",
+    "expected_keywords": ["pre-training", "fine-tuning", "transfer", "classification", "downstream"]
+  },
+  {
+    "id": 22,
+    "query": "Why does retrieval augmentation improve factual accuracy over purely parametric models and what are its failure modes?",
+    "type": "multi_hop",
+    "expected_keywords": ["parametric", "retrieval", "hallucination", "factual", "knowledge"]
+  },
+  {
+    "id": 23,
+    "query": "How do mixture-of-experts models scale versus dense transformers and what trade-offs arise at inference time?",
+    "type": "multi_hop",
+    "expected_keywords": ["mixture of experts", "sparse", "routing", "parameter", "inference"]
+  },
+  {
+    "id": 24,
+    "query": "What is the relationship between contrastive learning and self-supervised representation quality, and how does temperature scaling affect embeddings?",
+    "type": "multi_hop",
+    "expected_keywords": ["contrastive", "self-supervised", "representation", "temperature", "embedding"]
+  },
+  {
+    "id": 25,
+    "query": "How does knowledge distillation interact with quantization when deploying large transformer models on edge devices?",
+    "type": "multi_hop",
+    "expected_keywords": ["distillation", "quantization", "compression", "edge", "deployment"]
+  },
+  {
+    "id": 26,
+    "query": "What are the exact hyperparameters and hardware configurations used to train GPT-4?",
+    "type": "adversarial",
+    "expected_keywords": ["parameters", "training", "hardware", "configuration"]
+  },
+  {
+    "id": 27,
+    "query": "Explain the specific algorithmic differences between FlashAttention-2 and FlashAttention-3 on H100 GPUs",
+    "type": "adversarial",
+    "expected_keywords": ["FlashAttention", "attention", "GPU", "memory", "speed"]
+  },
+  {
+    "id": 28,
+    "query": "Compare the internal token routing decisions of Mixtral-8x7B versus GLaM for a specific math problem",
+    "type": "adversarial",
+    "expected_keywords": ["routing", "expert", "token", "mixture", "model"]
+  },
+  {
+    "id": 29,
+    "query": "What are the unpublished ablation results from the Llama-3 training run that were not included in the official paper?",
+    "type": "adversarial",
+    "expected_keywords": ["ablation", "training", "results", "model"]
+  },
+  {
+    "id": 30,
+    "query": "Provide a formal proof that transformer attention is Turing complete under infinite precision arithmetic",
+    "type": "adversarial",
+    "expected_keywords": ["Turing complete", "attention", "transformer", "proof"]
+  }
+]

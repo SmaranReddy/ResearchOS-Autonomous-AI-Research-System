@@ -15,12 +15,18 @@ from __future__ import annotations
 
 import os
 import re
+import time
 from typing import List, Tuple
 
 from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
+
+try:
+    from core.llm_counter import record as _llm_record
+except ImportError:
+    def _llm_record(caller, model, elapsed_ms): pass
 
 _MODEL = "llama-3.1-8b-instant"
 
@@ -92,12 +98,16 @@ def critique_answer(
         api_key = os.getenv("GROQ_API_KEY")
         # 8 s timeout — scoring uses max_tokens=100, completes in <2 s normally
         client = Groq(api_key=api_key, timeout=8.0)
+        _t0 = time.monotonic()
         response = client.chat.completions.create(
             model=_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
             max_tokens=100,
         )
+        _elapsed = int((time.monotonic() - _t0) * 1000)
+        _llm_record("critique_answer (scorer)", _MODEL, _elapsed)
+        print(f"[critique] LLM scoring took {_elapsed}ms")
         raw = response.choices[0].message.content.strip()
 
         score_match  = re.search(r"score\s*:\s*([0-9]*\.?[0-9]+)", raw, re.IGNORECASE)

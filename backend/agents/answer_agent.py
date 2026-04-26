@@ -5,6 +5,11 @@ from typing import AsyncGenerator, Optional
 from groq import Groq, AsyncGroq
 from dotenv import load_dotenv
 
+try:
+    from core.llm_counter import record as _llm_record
+except ImportError:
+    def _llm_record(caller, model, elapsed_ms): pass
+
 _PRIMARY_MODEL  = "llama-3.1-8b-instant"
 _FALLBACK_MODEL = "llama-3.1-8b-instant"  # same fast model — 70B is too slow for latency budget
 _RETRY_DELAY    = 0.3                      # reduced from 1.0s — less blocking between attempts
@@ -37,7 +42,7 @@ class AnswerAgent:
 
     CONFIDENCE_THRESHOLD = 0.35  # below this → context is treated as insufficient
 
-    def _call_with_retry(self, messages: list, temperature: float = 0.1, max_tokens: int = 1000) -> str:
+    def _call_with_retry(self, messages: list, temperature: float = 0.1, max_tokens: int = 1000, caller: str = "AnswerAgent") -> str:
         """
         Try primary model twice (with a short delay), then fall back once.
         Each attempt is capped by the client-level timeout (_LLM_TIMEOUT_S).
@@ -59,6 +64,7 @@ class AnswerAgent:
                     max_tokens=max_tokens,
                 )
                 _elapsed_ms = int((time.monotonic() - _t0) * 1000)
+                _llm_record(f"{caller} ({label})", model, _elapsed_ms)
                 if label != "primary attempt 1":
                     print(f"[LLM_RETRY] succeeded on {label} ({_elapsed_ms}ms)")
                 else:
@@ -94,6 +100,7 @@ class AnswerAgent:
                 [{"role": "user", "content": prompt}],
                 temperature=0.0,
                 max_tokens=10,
+                caller="AnswerAgent.get_context_confidence",
             )
             match = re.search(r"\d+(?:\.\d+)?", raw)
             if not match:
@@ -263,6 +270,7 @@ Respond in this structure:
                 ],
                 temperature=0.1,
                 max_tokens=700,  # reduced from 1000 — answers rarely need more; saves ~1s + tokens
+                caller="AnswerAgent.generate_answer",
             )
         except Exception as e:
             print(f"⚠️ AnswerAgent failed ({e})")

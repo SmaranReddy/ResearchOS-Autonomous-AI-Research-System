@@ -1,8 +1,14 @@
 import os
 import re
+import time
 from groq import Groq
 from dotenv import load_dotenv
 from typing import List
+
+try:
+    from core.llm_counter import record as _llm_record
+except ImportError:
+    def _llm_record(caller, model, elapsed_ms): pass
 
 
 # ---------------------------------------------------------------------------
@@ -110,6 +116,7 @@ ANSWER TO REFINE:
 Return ONLY the refined answer. No commentary, no preamble.
 """
 
+        _t0 = time.monotonic()
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -120,6 +127,9 @@ Return ONLY the refined answer. No commentary, no preamble.
                 temperature=0.1,
                 max_tokens=600,  # reduced from 1000 — refinement doesn't need full token budget
             )
+            _elapsed = int((time.monotonic() - _t0) * 1000)
+            _llm_record("CritiqueAgent.critique (refiner)", self.model, _elapsed)
+            print(f"[critique_agent] LLM refinement took {_elapsed}ms")
             refined = response.choices[0].message.content.strip()
 
             # --- Deterministic post-filter: enforce query scope ---

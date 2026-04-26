@@ -1,9 +1,15 @@
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
+
+try:
+    from core.llm_counter import record as _llm_record
+except ImportError:
+    def _llm_record(caller, model, elapsed_ms): pass
 
 
 class QueryTransformer:
@@ -46,6 +52,7 @@ class QueryTransformer:
             f"Generate exactly 2 short search queries for finding research papers about: {query}\n"
             f"Output only the 2 queries, one per line, no numbering."
         )
+        _t0 = time.monotonic()
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -53,10 +60,14 @@ class QueryTransformer:
                 temperature=0.7,
                 max_tokens=60,   # reduced from 100 — two short queries fit in 60 tokens
             )
+            _elapsed = int((time.monotonic() - _t0) * 1000)
+            _llm_record("QueryTransformer._expand", self.model, _elapsed)
+            print(f"[query_transform] _expand took {_elapsed}ms")
             lines = [l.strip() for l in response.choices[0].message.content.strip().splitlines() if l.strip()]
             return lines[:2]
         except Exception as e:
-            print(f"[ERROR] Query expansion failed: {type(e).__name__} — returning empty variations")
+            _elapsed = int((time.monotonic() - _t0) * 1000)
+            print(f"[ERROR] Query expansion failed: {type(e).__name__} — returning empty variations  ({_elapsed}ms)")
             return []
 
     def _resolve_with_history(self, query: str, chat_history: list) -> str:
@@ -82,6 +93,7 @@ class QueryTransformer:
             f"Conversation history:\n{history_text}\n\n"
             f"Follow-up question: {query}"
         )
+        _t0 = time.monotonic()
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -89,6 +101,9 @@ class QueryTransformer:
                 temperature=0.0,
                 max_tokens=120,
             )
+            _elapsed = int((time.monotonic() - _t0) * 1000)
+            _llm_record("QueryTransformer._resolve_with_history", self.model, _elapsed)
+            print(f"[query_transform] _resolve_with_history took {_elapsed}ms")
             resolved = response.choices[0].message.content.strip()
             if not resolved:
                 return query
@@ -97,7 +112,8 @@ class QueryTransformer:
             print(f"[QUERY_REWRITE] rewritten='{resolved}'")
             return resolved
         except Exception as e:
-            print(f"[QUERY_REWRITE] rewrite failed ({e}) — using original query")
+            _elapsed = int((time.monotonic() - _t0) * 1000)
+            print(f"[QUERY_REWRITE] rewrite failed ({e}) — using original query  ({_elapsed}ms)")
             return query
 
     def transform(self, query: str, chat_history: list = None) -> list[str]:

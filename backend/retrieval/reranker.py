@@ -1,10 +1,16 @@
 import os
 import re
+import time
 from typing import List, Dict
 from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
+
+try:
+    from core.llm_counter import record as _llm_record
+except ImportError:
+    def _llm_record(caller, model, elapsed_ms): pass
 
 
 class Reranker:
@@ -40,6 +46,7 @@ class Reranker:
             f"Passages:\n{passages}"
         )
 
+        _t0 = time.monotonic()
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -47,16 +54,17 @@ class Reranker:
                 temperature=0.0,
                 max_tokens=50,
             )
+            _elapsed = int((time.monotonic() - _t0) * 1000)
+            _llm_record("Reranker._batch_score", self.model, _elapsed)
+            print(f"[rerank] LLM batch score took {_elapsed}ms  ({len(docs)} docs)")
             raw = response.choices[0].message.content.strip()
             scores = [float(x.strip()) for x in re.split(r"[,\s]+", raw) if re.match(r"^\d+(\.\d+)?$", x.strip())]
             # Pad or trim to match doc count
             scores = (scores + [0.0] * len(docs))[:len(docs)]
             return scores
         except Exception as e:
-            print(f"[WARN] Batch rerank failed ({type(e).__name__}) — falling back to cosine similarity")
-            # Use Pinecone cosine similarity scores (scaled to 0-10) so the
-            # Phase 2c rerank-median check still works correctly and doesn't
-            # mistakenly trigger an extra LLM confidence call.
+            _elapsed = int((time.monotonic() - _t0) * 1000)
+            print(f"[WARN] Batch rerank failed ({type(e).__name__}) — falling back to cosine similarity  ({_elapsed}ms)")
             return [min(doc.get("score", 0.0) * 10.0, 10.0) for doc in docs]
 
     def rerank(self, query: str, docs: List[Dict], top_k: int = 5) -> List[Dict]:

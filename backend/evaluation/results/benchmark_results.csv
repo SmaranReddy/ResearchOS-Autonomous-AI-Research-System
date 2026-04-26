@@ -1,0 +1,31 @@
+id,query,type,b_total_ms,b_retrieve_ms,b_llm_ms,b_llm_calls,b_status,b_relevance,b_correctness,b_grounded,b_kw_coverage,ac_total_ms,ac_transform_ms,ac_retrieve_ms,ac_rerank_ms,ac_llm_ms,ac_llm_calls,ac_retry,ac_confidence,ac_status,ac_relevance,ac_correctness,ac_grounded,ac_kw_coverage,aw_total_ms,aw_cache_hit,aw_llm_calls
+1,What are transformers in deep learning?,factual,23394,22790,603,1,success,9,8,True,0.25,3559,419,1702,470,1383,3,False,0.895,success,9,8,True,0.25,1,True,0
+2,How does self-attention work in transformer models?,factual,1070,295,775,1,success,9,8,True,1.0,6288,325,817,405,4769,4,False,0.486,success,8,6,True,0.25,1,True,0
+3,What is BERT and how was it trained?,factual,9985,513,9471,1,success,9,8,True,1.0,26350,218,724,217,25404,5,False,0.541,success,9,8,True,0.75,1,True,0
+4,What are the computational limitations of transformer models?,factual,8407,274,8133,1,success,8,6,True,0.25,11090,370,651,378,10058,3,False,0.807,success,8,6,True,0.25,1,True,0
+5,How is the Vision Transformer different from CNNs?,factual,12180,273,11906,1,success,8,9,True,0.25,19381,316,656,998,17723,3,False,0.795,success,9,8,True,0.5,1,True,0
+6,What is retrieval-augmented generation?,factual,7822,265,7556,1,success,9,8,True,0.75,20476,240,531,269,19673,3,False,0.811,success,9,8,True,0.75,1,True,0
+7,What is the role of positional encoding in transformers?,factual,6739,278,6460,1,success,9,8,True,0.25,15886,1642,1913,251,13719,3,False,0.831,success,9,8,True,1.0,1,True,0
+8,How do graph neural networks work?,factual,6886,263,6623,1,success,8,7,True,0.5,37724,4414,35378,796,1546,3,False,0.859,success,8,7,True,0.75,1,True,0
+9,What are diffusion models in generative AI?,factual,1510,1149,360,1,success,9,8,True,0.25,8637,259,977,351,7304,3,False,0.803,success,9,8,True,0.75,1,True,0
+10,What is the transformer architecture used for in NLP?,factual,10605,701,9904,1,success,8,6,False,0.0,18113,349,851,419,16840,3,False,0.86,success,9,8,True,0.5,1,True,0
+11,Tell me about recent advances in AI,vague,7551,532,7019,1,success,8,9,True,0.5,21475,259,752,2366,18353,3,False,0.778,success,9,8,True,0.5,1,True,0
+12,How can machine learning help with science?,vague,10738,273,10464,1,success,9,8,True,0.25,27400,189,468,339,26587,4,False,0.462,success,9,8,True,1.0,1,True,0
+13,What makes a good language model?,vague,10210,257,9953,1,success,8,7,True,0.25,28229,209,477,2291,25457,4,False,0.691,success,9,8,True,0.75,1,True,0
+14,Explain neural networks to a beginner,vague,7159,268,6891,1,success,9,8,True,0.5,26610,258,595,2600,23409,4,False,0.77,success,9,8,True,0.5,1,True,0
+15,What are the main challenges in modern AI?,vague,9060,260,8799,1,success,9,8,True,0.5,14811,208,538,233,14036,3,False,0.757,success,9,8,True,0.75,1,True,0
+16,How do I make my machine learning model better?,vague,10994,281,10713,1,success,9,8,True,0.75,26363,1194,1489,2936,21933,4,False,0.517,fallback,9,8,True,0.5,26363,False,4
+17,What is attention in machine learning?,vague,5256,279,4977,1,success,9,8,True,1.0,11365,318,611,2365,8384,4,False,0.61,fallback,8,6,True,0.75,11365,False,4
+18,Why are larger models not always better and what techniques mitigate overfitting at scale?,vague,11148,253,10894,1,success,9,8,True,0.5,29338,225,521,3419,25394,4,False,0.742,success,9,8,True,0.75,1,True,0
+19,What is the connection between self-supervised learning and generative models in NLP?,vague,11058,298,10759,1,success,8,7,True,0.75,24093,368,642,246,23202,4,False,0.395,low_confidence,9,8,True,0.5,24093,False,4
+20,How do different attention variants like sparse and linear attention compare to full self-attention?,vague,12805,278,12526,1,success,2,8,True,0.6,3094,271,545,294,2251,4,False,0.195,fallback,8,2,False,0.0,3094,False,4
+21,How does BERT pre-training transfer to downstream tasks and what fine-tuning strategies work best?,multi_hop,10009,256,9752,1,success,8,7,True,0.8,28593,257,552,2393,25643,4,False,0.83,success,9,8,True,0.8,1,True,0
+22,Why does retrieval augmentation improve factual accuracy over purely parametric models and what are its failure modes?,multi_hop,11116,262,10854,1,success,6,7,True,0.8,27380,233,503,2505,24368,4,False,0.792,success,9,8,True,1.0,1,True,0
+23,How do mixture-of-experts models scale versus dense transformers and what trade-offs arise at inference time?,multi_hop,9072,268,8803,1,success,4,6,False,0.2,34577,261,538,266,24039,5,False,0.412,success,9,8,False,0.2,1,True,0
+24,"What is the relationship between contrastive learning and self-supervised representation quality, and how does temperature scaling affect embeddings?",multi_hop,11180,270,10909,1,success,8,6,True,1.0,30175,353,1619,3518,25033,4,False,0.504,success,8,6,True,1.0,1,True,0
+25,How does knowledge distillation interact with quantization when deploying large transformer models on edge devices?,multi_hop,11049,260,10789,1,success,9,8,True,0.6,26351,567,860,328,25160,4,False,0.784,success,9,8,True,0.8,1,True,0
+26,What are the exact hyperparameters and hardware configurations used to train GPT-4?,adversarial,9715,281,9433,1,success,2,1,False,0.0,24694,219,655,276,23758,4,False,0.367,fallback,8,6,True,1.0,24694,False,4
+27,Explain the specific algorithmic differences between FlashAttention-2 and FlashAttention-3 on H100 GPUs,adversarial,9980,259,9720,1,success,2,1,True,0.6,29400,316,595,1388,27414,4,False,0.148,fallback,8,6,True,0.6,29400,False,4
+28,Compare the internal token routing decisions of Mixtral-8x7B versus GLaM for a specific math problem,adversarial,16453,263,16189,1,success,1,1,True,0.4,48233,527,866,1329,30897,5,False,0.345,low_confidence,1,10,True,0.6,48233,False,5
+29,What are the unpublished ablation results from the Llama-3 training run that were not included in the official paper?,adversarial,15736,261,15474,1,success,8,9,True,1.0,34168,308,1538,263,32364,4,False,0.149,fallback,8,9,True,1.0,34168,False,4
+30,Provide a formal proof that transformer attention is Turing complete under infinite precision arithmetic,adversarial,10348,257,10090,1,success,8,6,True,1.0,29621,502,1726,1804,26085,4,False,0.17,fallback,6,4,True,1.0,29621,False,4

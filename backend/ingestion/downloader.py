@@ -1,5 +1,5 @@
 import requests
-import os, re, json
+import os, re, json, time as _time
 from io import BytesIO
 from time import sleep
 from PyPDF2 import PdfReader
@@ -35,21 +35,30 @@ class Downloader:
             item["full_text"] = ""
             return item
 
+        _t_dl_start = _time.monotonic()
         try:
             pdf_bytes = self._attempt_pdf_download(url)
+            _dl_ms = int((_time.monotonic() - _t_dl_start) * 1000)
             if not pdf_bytes:
-                print(f"[FAIL] Could not download PDF: {url}")
+                print(f"[download] '{title[:60]}' — FAILED in {_dl_ms}ms  url={url}")
                 item["full_text"] = ""
                 return item
+
+            print(f"[download] '{title[:60]}' — HTTP download took {_dl_ms}ms")
 
             # Save PDF
             with open(pdf_path, "wb") as f:
                 f.write(pdf_bytes)
-            print(f"[PDF] Saved PDF: {pdf_path}")
 
             # Extract text
+            _t_parse = _time.monotonic()
             text = self._extract_text(pdf_bytes)
+            _parse_ms = int((_time.monotonic() - _t_parse) * 1000)
+            print(f"[download] '{title[:60]}' — PDF parse took {_parse_ms}ms  ({len(text)} chars)")
             item["full_text"] = text
+
+            _total_ms = int((_time.monotonic() - _t_dl_start) * 1000)
+            print(f"[download] '{title[:60]}' took {_total_ms}ms total")
 
             # Save metadata JSON
             with open(json_path, "w", encoding="utf-8") as f:
@@ -59,10 +68,10 @@ class Downloader:
                     "chars": len(text),
                     "preview": text[:1000]
                 }, f, indent=2, ensure_ascii=False)
-            print(f"[JSON] Saved JSON: {json_path}")
 
         except Exception as e:
-            print(f"[WARN] Download or extraction failed: {e}")
+            _total_ms = int((_time.monotonic() - _t_dl_start) * 1000)
+            print(f"[WARN] Download or extraction failed for '{title[:60]}': {e}  ({_total_ms}ms)")
             item["full_text"] = ""
         return item
 
@@ -90,12 +99,18 @@ class Downloader:
 
         # Single pass — no retries to keep ingestion fast
         for u in try_urls:
+            _t0 = _time.monotonic()
             try:
-                r = self.session.get(u, timeout=12, allow_redirects=True)
+                r = self.session.get(u, timeout=5, allow_redirects=True)
+                _ms = int((_time.monotonic() - _t0) * 1000)
                 if "application/pdf" in r.headers.get("Content-Type", "") or r.content.startswith(b"%PDF"):
+                    print(f"[download] HTTP GET {u[:80]} → {_ms}ms  ({len(r.content)} bytes)")
                     return r.content
+                else:
+                    print(f"[download] HTTP GET {u[:80]} → {_ms}ms  (not a PDF, skipping)")
             except Exception as e:
-                print(f"[WARN] Download failed ({e})")
+                _ms = int((_time.monotonic() - _t0) * 1000)
+                print(f"[WARN] Download failed ({e})  ({_ms}ms)  url={u[:80]}")
         return None
 
     def _extract_text(self, pdf_bytes):

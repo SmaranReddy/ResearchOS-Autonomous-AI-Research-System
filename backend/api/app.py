@@ -69,28 +69,29 @@ async def _warmup():
     Each step is wrapped in try/except so a Pinecone outage at deploy time
     does not prevent the service from starting.
     """
+    _t_warmup_total = time.monotonic()
     print("[WARMUP] Starting pre-warm sequence...")
 
     # ── Step 1: Load embedding model + trigger ONNX JIT via dummy inference ──
-    # get_embedding_model() is a singleton — safe to call multiple times.
-    # The dummy embed call after it forces the ONNX runtime to JIT-compile
-    # the inference graph, eliminating the first-query compilation stall.
+    _t1 = time.monotonic()
     try:
         from utils.model import get_embedding_model
         model = await asyncio.to_thread(get_embedding_model)
         # list() fully consumes the generator, flushing the ONNX warmup pass
         await asyncio.to_thread(lambda: list(model.embed(["warmup"])))
-        print("[WARMUP] Embedding model ready")
+        _ms1 = int((time.monotonic() - _t1) * 1000)
+        print(f"[COLD_START] ONNX model load + JIT warmup took {_ms1}ms")
     except Exception as exc:
-        print(f"[WARMUP] Embedding model warmup failed (non-fatal): {exc}")
+        _ms1 = int((time.monotonic() - _t1) * 1000)
+        print(f"[WARMUP] Embedding model warmup FAILED ({_ms1}ms — non-fatal): {exc}")
 
     # ── Step 2: Init Pinecone singleton + open TCP/TLS connection ─────────────
-    # get_retriever() builds the RetrieverAgent singleton (creates Pinecone
-    # client, checks index existence).  The dummy query after it opens the
-    # TCP connection so the first real query doesn't pay the handshake cost.
+    _t2 = time.monotonic()
     try:
         retriever = await asyncio.to_thread(get_retriever)
+        _t2b = time.monotonic()
         dummy_vec = await asyncio.to_thread(retriever.embed_query, "warmup")
+        _t2c = time.monotonic()
         await asyncio.to_thread(
             retriever.index.query,
             namespace="default",
@@ -98,20 +99,23 @@ async def _warmup():
             top_k=1,
             include_metadata=False,
         )
-        print("[WARMUP] Pinecone connection warmed")
+        _ms2 = int((time.monotonic() - _t2) * 1000)
+        _ms2_init = int((_t2b - _t2) * 1000)
+        _ms2_query = int((time.monotonic() - _t2c) * 1000)
+        print(f"[COLD_START] Pinecone client init took {_ms2_init}ms")
+        print(f"[COLD_START] Pinecone TCP/TLS warmup query took {_ms2_query}ms")
+        print(f"[COLD_START] Pinecone total warmup took {_ms2}ms")
     except Exception as exc:
-        print(f"[WARMUP] Pinecone warmup failed (non-fatal): {exc}")
+        _ms2 = int((time.monotonic() - _t2) * 1000)
+        print(f"[WARMUP] Pinecone warmup FAILED ({_ms2}ms — non-fatal): {exc}")
 
     # ── Step 3: Init all Groq client singletons + warm the TCP/TLS connection ──
-    # QueryTransformer, AnswerAgent, CritiqueAgent each hold a Groq httpx client.
-    # Without this, the first pipeline call pays TCP+TLS handshake to api.groq.com
-    # (~300-500ms extra).  A single 1-token dummy call through any one of the clients
-    # establishes and pools the connection; all three share the same Groq endpoint so
-    # the OS-level TCP connection is reused across them.
+    _t3 = time.monotonic()
     try:
         qt = await asyncio.to_thread(get_query_transformer)
         await asyncio.to_thread(get_answer_agent)    # init sync+async Groq clients
         await asyncio.to_thread(get_critique_agent)  # init Groq client
+        _t3b = time.monotonic()
         # Fire a 1-token request to open the TCP/TLS connection to api.groq.com
         await asyncio.to_thread(
             lambda: qt.client.chat.completions.create(
@@ -121,12 +125,19 @@ async def _warmup():
                 temperature=0.0,
             )
         )
-        print("[WARMUP] Groq connection warmed")
+        _ms3 = int((time.monotonic() - _t3) * 1000)
+        _ms3_dummy = int((time.monotonic() - _t3b) * 1000)
+        print(f"[COLD_START] Groq client init took {int((_t3b - _t3) * 1000)}ms")
+        print(f"[COLD_START] Groq TCP/TLS warmup call took {_ms3_dummy}ms")
+        print(f"[COLD_START] Groq total warmup took {_ms3}ms")
     except Exception as exc:
-        print(f"[WARMUP] Groq warmup failed (non-fatal): {exc}")
+        _ms3 = int((time.monotonic() - _t3) * 1000)
+        print(f"[WARMUP] Groq warmup FAILED ({_ms3}ms — non-fatal): {exc}")
 
+    _total_warmup_ms = int((time.monotonic() - _t_warmup_total) * 1000)
+    print(f"[COLD_START] Total startup warmup took {_total_warmup_ms}ms")
+    print(f"[COLD_START] Process booted at {_BOOT_WALL} — warmup complete")
     print("[WARMUP] Done — service is warm and ready")
-    print(f"[COLD_START] Process booted at {_BOOT_WALL} — all resources pre-warmed")
 
 
 

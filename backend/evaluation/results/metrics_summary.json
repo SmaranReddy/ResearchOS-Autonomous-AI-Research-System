@@ -1,0 +1,40 @@
+{
+  "n": 30,
+  "latency": {
+    "b_avg": 9974.5,
+    "b_median": 10109.5,
+    "ac_avg": 23115.8,
+    "ac_median": 26350.5,
+    "aw_avg": 7701.73,
+    "aw_median": 1.0
+  },
+  "llm_calls": {
+    "b_avg": 1,
+    "ac_avg": 3.77,
+    "aw_avg": 1.23
+  },
+  "quality": {
+    "b_rel": 7.4,
+    "ac_rel": 8.33,
+    "b_cor": 6.9,
+    "ac_cor": 7.33,
+    "b_kw": 0.55,
+    "ac_kw": 0.66
+  },
+  "grounding": {
+    "b_rate": 0.9,
+    "ac_rate": 0.933
+  },
+  "retry_rate": 0.0,
+  "cache_hit_rate": 0.7,
+  "failure_rate": {
+    "b": 0.0,
+    "ac": 0.3
+  },
+  "confidence": {
+    "ac_avg": 0.6,
+    "ac_median": 0.72
+  },
+  "retry_count": 0,
+  "cache_hit_count": 21
+}

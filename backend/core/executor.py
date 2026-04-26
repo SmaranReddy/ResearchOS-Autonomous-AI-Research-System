@@ -7,6 +7,7 @@ from core.state import State
 from core.confidence import compute_composite, derive_status
 from core.decision import should_trigger_ingestion, REASON_TO_ACTION
 from core.critique import critique_answer
+from core.llm_counter import reset as _llm_reset, get_count as _llm_count, get_calls as _llm_calls
 
 from utils.search import TavilyAgent
 from ingestion.downloader import Downloader
@@ -109,9 +110,11 @@ def _step_search_web(state: State) -> State:
 
 
 def _step_download(state: State) -> State:
-    print(f"[download] downloading {len(state.papers)} papers")
+    print(f"[download] downloading {len(state.papers)} papers (parallel)")
     downloader = Downloader()
-    state.papers = [downloader.download_and_extract(p) for p in state.papers]
+    n = max(len(state.papers), 1)
+    with ThreadPoolExecutor(max_workers=n) as pool:
+        state.papers = list(pool.map(downloader.download_and_extract, state.papers))
     return state
 
 
@@ -343,11 +346,16 @@ def _run_step(state: State, step: str) -> State:
     state = STEP_REGISTRY[step](state)
     elapsed_ms = int((time.monotonic() - t0) * 1000)
     print(f"[{_tag}_TIME] {elapsed_ms}ms")
+    print(f"[{step}] took {elapsed_ms}ms")   # canonical format for analysis
 
     # Accumulate timing for observable stages
     key = _TIMED_STEPS.get(step)
     if key:
         state.latency_ms[key] = state.latency_ms.get(key, 0) + elapsed_ms
+
+    # Also accumulate per-step timing for top-N analysis
+    prev = state.latency_ms.get(f"{step}_ms", 0)
+    state.latency_ms[f"{step}_ms"] = prev + elapsed_ms
 
     if step == "search_web":
         print(f"[STEP] search_web → {len(state.papers)} papers found")
@@ -540,6 +548,8 @@ def run_pipeline_to_context(
     state._decision_strength = _strength
     if _should_ingest:
         print(f"[INGESTION TRIGGERED] Phase 2a reason={_reason} strength={_strength} → background")
+        print(f"INGESTION_TRIGGERED = True")
+        print(f"INGESTION_BLOCKING  = False  (Phase 2a — background thread)")
         # Non-blocking: ingest in background, answer with existing docs immediately.
         # The next request benefits from freshly indexed content.
         _launch_background_ingestion(state.user_query, state.num_papers)
@@ -566,6 +576,8 @@ def run_pipeline_to_context(
     state._decision_strength = _strength
     if _should_ingest and not state.ingestion_done:
         print(f"[INGESTION CHECK] Phase 2b reason={_reason} strength={_strength} → background")
+        print(f"INGESTION_TRIGGERED = True")
+        print(f"INGESTION_BLOCKING  = False  (Phase 2b — background thread)")
         # Non-blocking: ingest in background, answer with current ranked docs.
         _launch_background_ingestion(state.user_query, state.num_papers)
         state.ingestion_done = True
@@ -597,8 +609,11 @@ def run_pipeline(
     Returns (answer, confidence, updated_chat_history, sources, latency_ms, status).
     Pass chat_history from the previous call to enable conversational memory.
     """
+    _llm_reset()   # reset per-request LLM call counter
     _t_pipeline_start = time.monotonic()
     print(f"\n[TOTAL_START] {_ts()}")
+    print(f"INGESTION_TRIGGERED = False")   # default; overwritten below if triggered
+    print(f"INGESTION_BLOCKING  = False")
 
     # Phases 1–2: retrieval
     state = run_pipeline_to_context(query, num_papers, chat_history)
@@ -656,17 +671,14 @@ def run_pipeline(
         )
         state._decision_strength = _strength
         if _should_ingest:
-            print(f"[INGESTION CHECK] Phase 2c reason={_reason} → triggering ingestion (retry)")
-            for step in INGESTION_STEPS:
-                state = _run_step(state, step)
-            state = _run_step(state, "retrieve")
-            state = _run_step(state, "rerank")
+            print(f"[INGESTION CHECK] Phase 2c reason={_reason} → triggering ingestion (background)")
+            print(f"INGESTION_TRIGGERED = True")
+            print(f"INGESTION_BLOCKING  = False  (Phase 2c — background thread)")
+            _launch_background_ingestion(state.user_query, state.num_papers)
             state.ingestion_done = True
-            state.confidence_cached = False
             state.decision_trace["action"] = REASON_TO_ACTION[_reason]
-        else:
-            # confidence_cached already set in fast path; set here for the slow path too
-            state.confidence_cached = True
+        # confidence_cached already set in fast path; set here for the slow path too
+        state.confidence_cached = True
 
     # Phase 3a: generate answer
     state = _run_step(state, "answer")
@@ -819,14 +831,46 @@ def run_pipeline(
         else:
             state.decision_trace["action"] = "used_existing_knowledge"
     state.latency_ms["total_ms"] = int((time.monotonic() - _t_pipeline_start) * 1000)
+
+    # ── Comprehensive timing breakdown ───────────────────────────────────────
+    _total = state.latency_ms["total_ms"]
     print(
         f"\n[LATENCY_BREAKDOWN]"
         f"  TRANSFORM={state.latency_ms.get('transform_ms', 0)}ms"
         f"  RETRIEVE={state.latency_ms.get('retrieve_ms', 0)}ms"
         f"  RERANK={state.latency_ms.get('rerank_ms', 0)}ms"
         f"  LLM={state.latency_ms.get('llm_ms', 0)}ms"
-        f"  TOTAL={state.latency_ms.get('total_ms', 0)}ms"
+        f"  INGESTION={state.latency_ms.get('ingestion_ms', 0)}ms"
+        f"  TOTAL={_total}ms"
     )
+
+    # Per-step breakdown (all keys ending in _ms, excluding total_ms)
+    _step_times = {
+        k.replace("_ms", ""): v
+        for k, v in state.latency_ms.items()
+        if k.endswith("_ms") and k != "total_ms" and v > 0
+    }
+    if _step_times:
+        _sorted = sorted(_step_times.items(), key=lambda x: x[1], reverse=True)
+        print("\n[STEP_TIMING_TABLE]")
+        for _step, _ms in _sorted:
+            _pct = (_ms / _total * 100) if _total > 0 else 0
+            print(f"  {_step:<25} {_ms:>6}ms  ({_pct:.1f}%)")
+
+        # Top 3 slowest
+        top3 = _sorted[:3]
+        print("\n[TOP_3_SLOWEST_COMPONENTS]")
+        for rank, (_step, _ms) in enumerate(top3, 1):
+            _pct = (_ms / _total * 100) if _total > 0 else 0
+            print(f"  #{rank}  {_step:<25} {_ms:>6}ms  ({_pct:.1f}% of total)")
+
+    # LLM call summary
+    _n_llm = _llm_count()
+    _llm_log = _llm_calls()
+    print(f"\nTOTAL_LLM_CALLS = {_n_llm}")
+    for _entry in _llm_log:
+        print(f"  {_entry}")
+
     print(f"[PIPELINE] status={state.status}  confidence={state.confidence:.3f}")
 
     return (
